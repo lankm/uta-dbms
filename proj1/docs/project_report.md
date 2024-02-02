@@ -24,9 +24,7 @@ A list of code/testing files and what they do.
  - Landon Moon
    - ~~description of my work~~
  - Jacob Holz
-    - ~~description of my work~~
- - Juan Gamez
-    - ~~description of my work~~
+    - 2 hours - 2/1/24 - reading docs and started on _insert
 
 ## Logical errors and how you handled them
  - Logical Error 1
