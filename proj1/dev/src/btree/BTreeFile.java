@@ -373,25 +373,17 @@ public class BTreeFile extends IndexFile implements GlobalConst {
         /*
          * Start with validating the key [in our case it is integer
          * (attrInteger)]. If the tree is empty, create first page as newrootPage of
-         * type
-         * which will be a leaf page and set its page id to the headerpageId (already
-         * initialized
-         * in BTreeFile() constructor) and set its next page and previous page pointer
-         * to
-         * INVALID_PAGE; insert the <key,rid> using the insertRecord() method then
+         * type which will be a leaf page and set its page id to the headerpageId (already
+         * initialized in BTreeFile() constructor) and set its next page and previous page pointer
+         * to INVALID_PAGE; insert the <key,rid> using the insertRecord() method then
          * unpin the page as it is dirty (it is already pinned when you get from the
-         * buffer) and
-         * update the header page using updateHeader() else make a call to
+         * buffer) and update the header page using updateHeader() else make a call to
          * _insert()[newRootEntry=_insert(key,rid,headerPage.get_rootId());]
          * method to insert the record <key, data> and set the pointers. If a page
-         * overflows
-         * (i.e., no space for the new entry), you should split the page. You may have
-         * to insert
-         * additional entries of the form <key, id of child page> into the higher-level
-         * index
-         * pages as part of a split. Note that this could recursively go all the way up
-         * to the root,
-         * possibly resulting in a split of the root node of the B+ tree.
+         * overflows (i.e., no space for the new entry), you should split the page. You may have
+         * to insert additional entries of the form <key, id of child page> into the higher-level
+         * index pages as part of a split. Note that this could recursively go all the way up
+         * to the root, possibly resulting in a split of the root node of the B+ tree.
          */
 
         // keyType check
@@ -434,7 +426,7 @@ public class BTreeFile extends IndexFile implements GlobalConst {
         // // Page is an index node
         // page = new BTIndexPage(page, headerPage.get_keyType());
         // RID nextRID = page.firstRecord();
-        // while (nextRID != INVALID_PAGE) {
+        // while (nextRID != /*INVALID_PAGE*/) {
 
         // nextRID = page.nextRecord(nextRID);
         // }
@@ -450,8 +442,7 @@ public class BTreeFile extends IndexFile implements GlobalConst {
         /*
          * Check the pageType. If it is an INDEX page call _insert() recursively to
          * insert and split if necessary. If it a LEAF page again call _insert()
-         * recursively
-         * to insert and handle split.
+         * recursively to insert and handle split.
          * 
          * The keyCompare() method is used by _insert()to compare the key.
          * 
@@ -461,16 +452,12 @@ public class BTreeFile extends IndexFile implements GlobalConst {
          * will return a negative value and 0 if equal (key1 == key2).
          * 
          * NOTE: As discussed in the class, condition for traversal can be chosen, but
-         * needs
-         * to be consistent for an implementation. Clearly state in the report, which
-         * traversal
-         * choice you chose for your implementation, Choice1) the right pointer needs to
-         * be
-         * traversed if key1 value is greater than or equal to key2; else traverse the
+         * needs to be consistent for an implementation. Clearly state in the report, which
+         * traversal choice you chose for your implementation, Choice1) the right pointer needs to
+         * be traversed if key1 value is greater than or equal to key2; else traverse the
          * left pointer.
          * OR Choice2) the right pointer needs to be traversed if key1 value is greater
-         * than
-         * key2; else traverse the left pointer
+         * than key2; else traverse the left pointer
          */
 
         // TODO _insert() method - https://github.com/lankm/uta-dbms/issues/4
