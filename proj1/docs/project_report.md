@@ -22,7 +22,7 @@ A list of code/testing files and what they do.
 
 ## Division of Labor
  - Landon Moon
-   - ~~description of my work~~
+    - 2 hours - 2/1/24 - reading docs and started on Insert
  - Jacob Holz
     - 2 hours - 2/1/24 - reading docs and started on _insert
 
