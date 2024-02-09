@@ -373,43 +373,73 @@ public class BTreeFile extends IndexFile implements GlobalConst {
         /*
          * Start with validating the key [in our case it is integer
          * (attrInteger)]. If the tree is empty, create first page as newrootPage of
-         * type which will be a leaf page and set its page id to the headerpageId (already
-         * initialized in BTreeFile() constructor) and set its next page and previous page pointer
+         * type which will be a leaf page and set its page id to the headerpageId
+         * (already
+         * initialized in BTreeFile() constructor) and set its next page and previous
+         * page pointer
          * to INVALID_PAGE; insert the <key,rid> using the insertRecord() method then
          * unpin the page as it is dirty (it is already pinned when you get from the
          * buffer) and update the header page using updateHeader() else make a call to
          * _insert()[newRootEntry=_insert(key,rid,headerPage.get_rootId());]
          * method to insert the record <key, data> and set the pointers. If a page
-         * overflows (i.e., no space for the new entry), you should split the page. You may have
-         * to insert additional entries of the form <key, id of child page> into the higher-level
-         * index pages as part of a split. Note that this could recursively go all the way up
+         * overflows (i.e., no space for the new entry), you should split the page. You
+         * may have
+         * to insert additional entries of the form <key, id of child page> into the
+         * higher-level
+         * index pages as part of a split. Note that this could recursively go all the
+         * way up
          * to the root, possibly resulting in a split of the root node of the B+ tree.
          */
 
         // keyType check
         short keyType = headerPage.get_keyType();
         if (keyType != AttrType.attrInteger && keyType != AttrType.attrString) {
-            throw new Error("insert doesn't support the given AttrType");
+            throw new KeyNotMatchException("Invalid key type: " + keyType + " is not an integer or string");
         }
 
         // null root check
         if (headerPage.get_rootId().pid == INVALID_PAGE) {
+            // create new root
             BTLeafPage newRootPage = new BTLeafPage(keyType);
-            PageId newRoot = newRootPage.getCurPage();
+            PageId newRootId = newRootPage.getCurPage();
 
+            // set previous and next pages for leaf page
             newRootPage.setPrevPage(new PageId(INVALID_PAGE));
             newRootPage.setNextPage(new PageId(INVALID_PAGE));
 
+            // insert first value
             newRootPage.insertRecord(key, rid);
 
-            unpinPage(newRoot, true);
-            updateHeader(newRoot);
+            // update changes
+            unpinPage(newRootId, true);
+            updateHeader(newRootId);
         } else {
-            // _insert(key, rid, headerPage.get_rootId());
+            KeyDataEntry result = _insert(key, rid, headerPage.get_rootId());
+
+            // if creation of new root is required
+            if (result != null) {
+                // create new root
+                BTIndexPage newRootPage = new BTIndexPage(keyType);
+                PageId newRootId = newRootPage.getCurPage();
+
+                // set left child as previous root
+                newRootPage.setPrevPage(headerPage.get_rootId());
+
+                // set right child as newly created page from _insert
+                try {
+                    newRootPage.insertRecord(result);
+                } catch (InsertRecException e) {
+                    // an empty index page should not recieve this error
+                    e.printStackTrace();
+                }
+
+                // update changes
+                unpinPage(newRootId, true);
+                updateHeader(newRootId);
+            }
         }
 
         // TODO Insert() method - https://github.com/lankm/uta-dbms/issues/4
-        // [ASantra: 1/14/2024] Write your code here
     }
 
     private KeyDataEntry _insert(KeyClass key, RID rid, PageId currentPageId)
@@ -420,25 +450,120 @@ public class BTreeFile extends IndexFile implements GlobalConst {
             KeyNotMatchException, NodeNotMatchException, InsertException
 
     {
-        // BTSortedPage page = new BTSortedPage(currentPageId,
-        // headerPage.get_keyType());
-        // if (page.getType() == NodeType.INDEX) {
-        // // Page is an index node
-        // page = new BTIndexPage(page, headerPage.get_keyType());
-        // RID nextRID = page.firstRecord();
-        // while (nextRID != /*INVALID_PAGE*/) {
+        BTSortedPage page = new BTSortedPage(currentPageId, headerPage.get_keyType());
+        // Test page type
+        if (page.getType() == NodeType.INDEX) {
+            // Page is an index node
+            
+            // Cast the page to its proper type
+            BTIndexPage currentPage = new BTIndexPage(page, headerPage.get_keyType());
+            // Get the page number of the next page based on the key
+            PageId nextPage = currentPage.getPageNoByKey(key);
+            // Insert the key and rid into the next page recursively,
+            // Store the result in case something was pushed/copied up
+            KeyDataEntry result = _insert(key, rid, nextPage);
+            // Initialize the return value
+            KeyDataEntry toPushUp = null;
+            // Test if something was pushed/copied up
+            if (result != null) {
+                // Get the key and page number of the new entry to be inserted
+                KeyClass resultKey = result.key;
+                PageId resultPageId = ((IndexData) result.data).getData();
+                // Test if there is space for the new entry
+                if (currentPage.available_space() > 0) { // There was enough space to just insert the entry
+                    // If there is space for the new entry, insert the new entry
+                    currentPage.insertKey(resultKey, resultPageId);
+                } else { // There was not enough space for the new entry, we have to split
+                    // Create the new page to split into
+                    BTIndexPage newPage = new BTIndexPage(headerPage.get_keyType());
+                    // Get the last slot number - 1, so getNext gets the last
+                    int preLastSlotNumber = currentPage.getSlotCnt() - 2;
+                    // Get the middle slot number, so getNext gets the middle
+                    int preMiddleSlotNumber = currentPage.getSlotCnt() / 2 - 1;
 
-        // nextRID = page.nextRecord(nextRID);
-        // }
+                    // Make the (last slot - 1)'s RID
+                    RID preLastRID = new RID(currentPageId, preLastSlotNumber);
+                    // Get the last entry
+                    KeyDataEntry lastEntry = currentPage.getNext(preLastRID);
 
-        // } else if (page.getType() == NodeType.LEAF){
-        // // Page is a leaf node
-        // page = new BTLeafPage(page, headerPage.get_keyType());
+                    // Move last entry from current index page to new index page
+                    try {
+                        currentPage.deleteKey(lastEntry.key);
+                        newPage.insertRecord(lastEntry);
+                    } catch (IndexFullDeleteException e) {
+                        throw new IllegalStateException(
+                                "There must be at least one entry in the current page for it to be full");
+                    } catch (InsertRecException e) {
+                        throw new IllegalStateException(
+                                "A new page must have room for a single insertion");
+                    }
+                    
+                    // Insert the new entry to the current page
+                    try {
+                        currentPage.insertRecord(result);
+                    } catch (InsertRecException e) {
+                        throw new IllegalStateException(
+                                "A new page must have room for a single insertion");
+                    }
 
-        // } else {
-        // throw new IllegalArgumentException("Invalid page type: " + page.getType() + "
-        // is not an index or leaf page")
-        // }
+                    // Get (middle entry - 1)'s RID
+                    RID preMiddleRID = new RID(currentPageId, preMiddleSlotNumber);
+                    // Get middle entry
+                    KeyDataEntry middleEntry = currentPage.getNext(preMiddleRID);
+
+                    // Make toPushUp from newPage and middle key
+                    toPushUp = new KeyDataEntry(middleEntry.key, newPage.getCurPage());
+                    // Use middle pageNo as left of new page
+                    newPage.setLeftLink(((IndexData) middleEntry.data).getData());
+                    
+                    // Remove middle entry from current page
+                    try {
+                        currentPage.deleteKey(middleEntry.key);
+                    } catch (IndexFullDeleteException e) {
+                        throw new IllegalStateException(
+                                "There must be at least one entry in the current page for it to be full");
+                    }
+                    
+                    // Get the number of entries remaining
+                    int countToMove = (currentPage.getSlotCnt() - 1) / 2;
+                    // Distribute key pairs
+                    for (int i = 0; i < countToMove; i++) {
+                        // Reset middleRID
+                        preMiddleRID = new RID(currentPageId, preMiddleSlotNumber);
+                        // Get the to be moved entry
+                        KeyDataEntry toBeMovedEntry = currentPage.getNext(preMiddleRID);
+                        try {
+                            newPage.insertRecord(toBeMovedEntry);
+                            currentPage.deleteKey(toBeMovedEntry.key);
+                        } catch (IndexFullDeleteException e) {
+                            throw new IllegalStateException(
+                                    "There must be at least one entry in the current page for it to be full");
+                        } catch (InsertRecException e) {
+                            throw new IllegalStateException(
+                                    "A new page must have room for a single insertion");
+                        }
+                    }
+
+                    unpinPage(newPage.getCurPage(), true);
+
+                }
+                // Unpin the page as we have inserted and it is dirty
+                unpinPage(currentPageId, true);
+            } else { // nothing was pushed/copied from child
+                unpinPage(currentPageId, false);
+            }
+
+            
+            // return pushed up value to parent
+            return toPushUp;
+
+        } else if (page.getType() == NodeType.LEAF) {
+            // Page is a leaf node
+            BTLeafPage realPage = new BTLeafPage(page, headerPage.get_keyType());
+
+        } else {
+            throw new IllegalArgumentException("Invalid page type: " + page.getType() + "is not an index or leaf page");
+        }
         /*
          * Check the pageType. If it is an INDEX page call _insert() recursively to
          * insert and split if necessary. If it a LEAF page again call _insert()
@@ -452,9 +577,12 @@ public class BTreeFile extends IndexFile implements GlobalConst {
          * will return a negative value and 0 if equal (key1 == key2).
          * 
          * NOTE: As discussed in the class, condition for traversal can be chosen, but
-         * needs to be consistent for an implementation. Clearly state in the report, which
-         * traversal choice you chose for your implementation, Choice1) the right pointer needs to
-         * be traversed if key1 value is greater than or equal to key2; else traverse the
+         * needs to be consistent for an implementation. Clearly state in the report,
+         * which
+         * traversal choice you chose for your implementation, Choice1) the right
+         * pointer needs to
+         * be traversed if key1 value is greater than or equal to key2; else traverse
+         * the
          * left pointer.
          * OR Choice2) the right pointer needs to be traversed if key1 value is greater
          * than key2; else traverse the left pointer
