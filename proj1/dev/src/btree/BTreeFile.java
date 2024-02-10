@@ -537,10 +537,10 @@ public class BTreeFile extends IndexFile implements GlobalConst {
                             currentPage.deleteKey(toBeMovedEntry.key);
                         } catch (IndexFullDeleteException e) {
                             throw new IllegalStateException(
-                                    "There must be at least one entry in the current page for it to be full");
+                                    "Key must have been in the current page for its key to be aquired");
                         } catch (InsertRecException e) {
                             throw new IllegalStateException(
-                                    "A new page must have room for a single insertion");
+                                    "A new page must have room for half as many slots as it has insertions");
                         }
                     }
 
