@@ -469,7 +469,12 @@ public class BTreeFile extends IndexFile implements GlobalConst {
                 // Test if there is space for the new entry
                 if (currentPage.available_space() > 0) { // There was enough space to just insert the entry
                     // If there is space for the new entry, insert the new entry
-                    currentPage.insertRecord(result);
+                    try {
+                        currentPage.insertRecord(result);
+                    } catch (InsertRecException e) {
+                        throw new IllegalStateException(
+                                "A page that claims to have space should have space");
+                    }
                 } else { // There was not enough space for the new entry, we have to split
                     // Create the new page to split into
                     BTIndexPage newPage = new BTIndexPage(headerPage.get_keyType());
