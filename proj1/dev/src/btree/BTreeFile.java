@@ -466,13 +466,10 @@ public class BTreeFile extends IndexFile implements GlobalConst {
             KeyDataEntry toPushUp = null;
             // Test if something was pushed/copied up
             if (result != null) {
-                // Get the key and page number of the new entry to be inserted
-                KeyClass resultKey = result.key;
-                PageId resultPageId = ((IndexData) result.data).getData();
                 // Test if there is space for the new entry
                 if (currentPage.available_space() > 0) { // There was enough space to just insert the entry
                     // If there is space for the new entry, insert the new entry
-                    currentPage.insertKey(resultKey, resultPageId);
+                    currentPage.insertRecord(result);
                 } else { // There was not enough space for the new entry, we have to split
                     // Create the new page to split into
                     BTIndexPage newPage = new BTIndexPage(headerPage.get_keyType());
@@ -552,45 +549,103 @@ public class BTreeFile extends IndexFile implements GlobalConst {
             } else { // nothing was pushed/copied from child
                 unpinPage(currentPageId, false);
             }
-
             
             // return pushed up value to parent
             return toPushUp;
 
         } else if (page.getType() == NodeType.LEAF) {
             // Page is a leaf node
-            BTLeafPage realPage = new BTLeafPage(page, headerPage.get_keyType());
+            BTLeafPage currentPage = new BTLeafPage(page, headerPage.get_keyType());
+            // Initialize the return value
+            KeyDataEntry toPushUp = null;
+            // Test if there is space for the new entry
+            if (currentPage.available_space() > 0) { // There was enough space to just insert the entry
+                // If there is space for the new entry, insert the new entry
+                currentPage.insertRecord(key, rid);
+            } else { // There was not enough space for the new entry, we have to split
+                // Create the new page to split into
+                BTLeafPage newPage = new BTLeafPage(headerPage.get_keyType());
+
+                // Get the last slot number - 1, so getNext gets the last
+                int preLastSlotNumber = currentPage.getSlotCnt() - 2;
+                // Get the middle slot number, so getNext gets the middle
+                int preMiddleSlotNumber = currentPage.getSlotCnt() / 2 - 1;
+
+                // Make the (last slot - 1)'s RID
+                RID preLastRID = new RID(currentPageId, preLastSlotNumber);
+                // Get the last entry and update the preLastRID to actually be the lastRID
+                KeyDataEntry lastEntry = currentPage.getNext(preLastRID);
+
+                // Move last entry from current leaf page to new leaf page
+                try {
+                    currentPage.deleteSortedRecord(preLastRID);
+                    newPage.insertRecord(lastEntry);
+                } catch (DeleteRecException e) {
+                    throw new IllegalStateException(
+                            "There must be at least one entry in the current page for it to be full");
+                } catch (InsertRecException e) {
+                    throw new IllegalStateException(
+                            "A new page must have room for a single insertion");
+                }
+                
+                // Insert the new entry to the current page
+                try {
+                    currentPage.insertRecord(key, rid);
+                } catch (LeafInsertRecException e) {
+                    throw new IllegalStateException(
+                            "A new page must have room for a single insertion");
+                }
+
+                // Get (middle entry - 1)'s RID
+                RID preMiddleRID = new RID(currentPageId, preMiddleSlotNumber);
+                // Get middle entry and update the preMiddleRID to actually be the middleRID
+                KeyDataEntry middleEntry = currentPage.getNext(preMiddleRID);
+
+                // Make toPushUp from newPage and middle key
+                toPushUp = new KeyDataEntry(middleEntry.key, newPage.getCurPage());
+                // Use middle pageNo as left of new page
+                newPage.setPrevPage(currentPageId);
+                
+                // Remove middle entry from current page
+                try {
+                    currentPage.deleteSortedRecord(preMiddleRID);
+                } catch (DeleteRecException e) {
+                    throw new IllegalStateException(
+                            "There must be at least one entry in the current page for it to be full");
+                }
+                
+                // Get the number of entries remaining
+                int countToMove = (currentPage.getSlotCnt() - 1) / 2;
+                // Distribute key pairs
+                for (int i = 0; i < countToMove; i++) {
+                    // Reset middleRID
+                    preMiddleRID = new RID(currentPageId, preMiddleSlotNumber);
+                    // Get the to be moved entry and update the preMiddleRID to actually be the middleRID
+                    KeyDataEntry toBeMovedEntry = currentPage.getNext(preMiddleRID);
+                    try {
+                        newPage.insertRecord(toBeMovedEntry);
+                        currentPage.deleteSortedRecord(preMiddleRID);
+                    } catch (DeleteRecException e) {
+                        throw new IllegalStateException(
+                                "Key must have been in the current page for its key to be aquired");
+                    } catch (InsertRecException e) {
+                        throw new IllegalStateException(
+                                "A new page must have room for half as many slots as it has insertions");
+                    }
+                }
+
+                unpinPage(newPage.getCurPage(), true);
+
+            }
+            // Unpin the page as we have inserted and it is dirty
+            unpinPage(currentPageId, true);
+            
+            // return pushed up value to parent
+            return toPushUp;
 
         } else {
             throw new IllegalArgumentException("Invalid page type: " + page.getType() + "is not an index or leaf page");
         }
-        /*
-         * Check the pageType. If it is an INDEX page call _insert() recursively to
-         * insert and split if necessary. If it a LEAF page again call _insert()
-         * recursively to insert and handle split.
-         * 
-         * The keyCompare() method is used by _insert()to compare the key.
-         * 
-         * int keyCompare(KeyClass key1, KeyClass key2)
-         * 
-         * This method returns an integer. key1>key2 returns a positive value, key1<key2
-         * will return a negative value and 0 if equal (key1 == key2).
-         * 
-         * NOTE: As discussed in the class, condition for traversal can be chosen, but
-         * needs to be consistent for an implementation. Clearly state in the report,
-         * which
-         * traversal choice you chose for your implementation, Choice1) the right
-         * pointer needs to
-         * be traversed if key1 value is greater than or equal to key2; else traverse
-         * the
-         * left pointer.
-         * OR Choice2) the right pointer needs to be traversed if key1 value is greater
-         * than key2; else traverse the left pointer
-         */
-
-        // TODO _insert() method - https://github.com/lankm/uta-dbms/issues/4
-        // [ASantra: 1/14/2024] Remove the return statement and start your code.
-        return null;
     }
 
     /**
@@ -800,7 +855,32 @@ public class BTreeFile extends IndexFile implements GlobalConst {
             throws LeafDeleteException, KeyNotMatchException, PinPageException,
             ConstructPageException, IOException, UnpinPageException,
             PinPageException, IndexSearchException, IteratorException {
+        // keyType check
+        short keyType = headerPage.get_keyType();
+        if (keyType != AttrType.attrInteger && keyType != AttrType.attrString) {
+            throw new KeyNotMatchException("Invalid key type: " + keyType + " is not an integer or string");
+        }
+        // Get intitial page TODO: Make sure this is the right page
+        BTSortedPage page = new BTSortedPage(headerPageId, headerPage.get_keyType());
+        // Step down the levels until you get to a leaf page
+        while (page.getType() == NodeType.INDEX) {
+            // Cast the page to BTIndexPage
+            BTIndexPage indexPage = new BTIndexPage(page, headerPage.get_keyType());
+            // Set the new page to the next page to be searched
+            page = new BTSortedPage(indexPage.getPageNoByKey(key), headerPage.get_keyType());
+            // Unpin the unaltered index page after it has been used
+            unpinPage(indexPage.getCurPage(), false);
+        }
 
+        // Leaf page check
+        if (page.getType() != NodeType.LEAF) {
+            throw new IllegalStateException("Naked index page missing a leaf page");
+        }
+
+        // Cast page to BTLeafPage
+        BTLeafPage leafPage = new BTLeafPage(page, headerPage.get_keyType());
+        // Delete the entry with the correct key and rid TODO: Check if it is possible to have multiple of the same entry
+        leafPage.delEntry(new KeyDataEntry(key, rid));
         /*
          * The Delete method simply removes the entry <key, data ptr> from the
          * appropriate BTLeafPage, if it exists. You do not need to implement
