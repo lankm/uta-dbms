@@ -606,18 +606,14 @@ public class BTreeFile extends IndexFile implements GlobalConst {
                 // Get middle entry and update the preMiddleRID to actually be the middleRID
                 KeyDataEntry middleEntry = currentPage.getNext(preMiddleRID);
 
-                // Make toPushUp from newPage and middle key
+                // Make toPushUp from newPage and middle key (actually copied up because it is not deleted)
                 toPushUp = new KeyDataEntry(middleEntry.key, newPage.getCurPage());
-                // Use middle pageNo as left of new page
+                // Use current pageNo as left of new page
                 newPage.setPrevPage(currentPageId);
-                
-                // Remove middle entry from current page
-                try {
-                    currentPage.deleteSortedRecord(preMiddleRID);
-                } catch (DeleteRecException e) {
-                    throw new IllegalStateException(
-                            "There must be at least one entry in the current page for it to be full");
-                }
+                // Use current nextPage as right of new page
+                newPage.setNextPage(currentPage.getNextPage());
+                // Use new page as right of current page
+                currentPage.setNextPage(newPage.getCurPage());
                 
                 // Get the number of entries remaining
                 int countToMove = (currentPage.getSlotCnt() - 1) / 2;
