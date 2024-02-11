@@ -858,7 +858,13 @@ public class BTreeFile extends IndexFile implements GlobalConst {
         if (keyType != AttrType.attrInteger && keyType != AttrType.attrString) {
             throw new KeyNotMatchException("Invalid key type: " + keyType + " is not an integer or string");
         }
-        // Get intitial page TODO: Make sure this is the right page
+
+        // Root page existance check
+        if (headerPage.get_rootId().pid == INVALID_PAGE) {
+            throw new IteratorException("No root page found");
+        }
+
+        // Get intitial page
         BTSortedPage page = new BTSortedPage(headerPage.get_rootId(), headerPage.get_keyType());
         // Step down the levels until you get to a leaf page
         while (page.getType() == NodeType.INDEX) {
@@ -872,47 +878,43 @@ public class BTreeFile extends IndexFile implements GlobalConst {
 
         // Leaf page check
         if (page.getType() != NodeType.LEAF) {
-            throw new IllegalStateException("Naked index page missing a leaf page: " + page.getType());
+            throw new IllegalStateException("Naked index page missing a leaf page");
         }
 
         // Cast page to BTLeafPage
         BTLeafPage leafPage = new BTLeafPage(page, headerPage.get_keyType());
-        // Delete the entry with the correct key and rid TODO: Check if it is possible to have multiple of the same entry
-        leafPage.delEntry(new KeyDataEntry(key, rid));
-        /*
-         * The Delete method simply removes the entry <key, data ptr> from the
-         * appropriate BTLeafPage, if it exists. You do not need to implement
-         * redistribution or
-         * page merging when the number of entries falls below threshold. All duplicate
-         * values
-         * have to be deleted. This method is given and is set to call NaiveDelete()
-         * method by
-         * default.
-         * 
-         * NaiveDelete() method
-         * 
-         * In NaïveDelete() you need to remove the data entry <key, data ptr> from the
-         * leaf page of the index without any merging or redistribution.
-         * 
-         * The method required to search is already given. It returns the leaf page at
-         * the
-         * left most part of the tree and then search for the key to be deleted as leaf
-         * pages
-         * are organized as a doubly link list. You can see the search algorithm in the
-         * book
-         * for more clarity. You need to be careful if the search key does not exist at
-         * the leaf
-         * level
-         * BTLeafPage findRunStart(key, curRid);
-         * 
-         * If the search key does not exist at the leaf level, then your code must
-         * handle
-         * it gracefully by giving proper message on the screen.
-         */
-
-        // TODO NaiveDelete() method - https://github.com/lankm/uta-dbms/issues/2
-        // [ASantra: 1/14/2024] Remove the return statement and start your code.
-
+        // Delete the entry and store whether it was present
+        boolean found = leafPage.delEntry(new KeyDataEntry(key, rid));
+        if (found) {
+            // repeat deleting to remove duplicates
+            while (found) {
+                // Continue if a duplicate is found
+                found = leafPage.delEntry(new KeyDataEntry(key, rid));
+                // If no more duplicates are found, 
+                if (!found) {
+                    // Unpin this page so that it can be unpined when it is no longer needed
+                    PageId lastPageId = leafPage.getCurPage();
+                    // Check the existance of a previous page
+                    boolean previousPageExists = leafPage.getPrevPage().pid != INVALID_PAGE;
+                    // Step to the previous page to continue search as the search goes to the last page containing the key
+                    if(previousPageExists){
+                        leafPage = new BTLeafPage(leafPage.getPrevPage(), headerPage.get_keyType());
+                    }
+                    // Unpin the finished page
+                    if (previousPageExists) {
+                        unpinPage(lastPageId, true);
+                    }
+                    // Update whether there was another on this page
+                    found = leafPage.delEntry(new KeyDataEntry(key, rid));
+                }
+            }
+            // Unpin the final page, the first page without any instances of the key
+            unpinPage(leafPage.getCurPage(), false);
+            return true;
+        }
+        // Unpin the page that had no more instances of the key
+        unpinPage(leafPage.getCurPage(), false);
+        System.out.println("No matches found");
         return false;
     }
 
