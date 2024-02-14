@@ -10,6 +10,12 @@ Convert to pdf when finalized.
 
 ### Current status: Completed
 
+We implemented the major components in a way that followes the described algorithms in class. Our traversal algorithm is the same as the one shown in class (left child tree if < and right child tree if >=)
+
+The Insert() function first check whether the root is null, then passes operation to _insert(). _insert() is a recursive function which runs for each index/leaf page. If the current page is an index page, it will search the values within the page and it will run _insert() on the coresponding child-page. If the current page is a leaf page, the value is inserted if possible. If inserting is not possible, it splits the leaf page by making a new leaf page and splitting the values between the two. A KeyDataEntry with a copied value is then pushed up the calling _insert() function. If the _insert() function is running on an insert page and it recieves a value from its sub-_insert() call, it inserts it into the current page. If no space exists it splits the index page similar to an leaf page but pushes the middle value instead of copying it. Lastly if the _insert() call on the root returns a value, a new root needs to be made with records pointing to the previous page and the newly created page from the sub-_insert() call.
+
+The NaiveDelete() function works by first searching the tree similar to the _insert() function but with a while(type==index) loop instead of being recursive. When at a leaf page the leafPage.delEntry() function is called and its return value is used to determine whether the value exists. If the value exists, a while loop is executed to delete all values with the same key value.
+
 ### Implemented Correctly
 
 Insert(), _insert(), and NaiveDelete() are believed to be working properly
@@ -26,7 +32,7 @@ No new files were created. Only changes are in the designated area in BTreeFile.
 
 Initially we divided the labor by getting together and completing the required functions in the order which they are needed. This is Insert(), _insert(), then NaiveDelete(). This work was done in a pair programming fasion so many logical errors could be avoided on the first pass.
 
-After the second coding session, Jacob decided to complete the rest of _insert() and NaiveDelete(). This code was then tested by both members to confirm that it works like it should. More in depth testing was still needed.
+After the second coding session, Jacob decided to complete the rest of _insert() and NaiveDelete(). This code was then tested by both members to confirm that it works like it should.
 
  - Landon Moon
     - 2 hours - 2/1/24  - Reading docs and started on Insert()
