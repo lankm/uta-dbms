@@ -35,9 +35,11 @@ Initially we divided the labor by getting together and completing the required f
 After the second coding session, Jacob decided to complete the rest of _insert() and NaiveDelete(). This code was then tested by both members to confirm that it works like it should.
 
  - Landon Moon
+    - 3 hours - 1/30/24 - Initial setup, first run, and helping teammates set up the environment
     - 2 hours - 2/1/24  - Reading docs and started on Insert()
     - 2 hours - 2/8/24  - Finished Insert(). Helped polish and bugfix _insert()
     - 1 hour  - 2/11/24 - Report writing
+    - 1 hour  - 2/13/24 - Report finalizing
  - Jacob Holz
     - 2 hours - 2/1/24  - Reading docs and started on _insert()
     - 2 hours - 2/8/24  - Completed rough draft of _insert() index page traversal/splitting
