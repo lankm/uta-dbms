@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#echo "loop n times (input int)"
+if [ "$#" -ne 2 ]; then
+    echo "Usage: tmtest loopcount filename(without extension)"
+    exit 1
+fi
+
+loop="$1"
+#echo "Type input file name (without ext)"
+infile="$2"
+\rm -f "$infile.out"
+\rm -f "$infile.log"
+# added to remove log file in the src dir
+rm -f "./$infile.log"
+count=0
+
+#echo "$infile" 
+
+while [ "$count" -lt "$loop" ]; do
+    echo "EXECUTION: $count"
+    echo "Execution: " >> "$infile.out"
+    echo "$count" >> "$infile.out"
+    #echo ""
+    # ./zgt_test "$infile.txt" | cat - "$infile.out" > /tmp/out && mv /tmp/out "$infile.out"
+    ./zgt_test "$infile.txt" > "$infile.out"
+    ((count++))
+done
+
+./ipcs_cleanup.sh
+
