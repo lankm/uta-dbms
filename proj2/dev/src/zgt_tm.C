@@ -200,7 +200,7 @@ int zgt_tm::ddlockDet()
 
    pthread_t thread1;
    int status;
-   //   status=pthread_create(&thread1, NULL,ddlockdet,(void*)NULL);	// Fork a thread and pass tid
+   //   status=pthread_create(&thread1, NULL,ddlockdet,(void*)NULL);  // Fork a thread and pass tid
    // if (status){
    // printf("ERROR: return code from pthread_create() is:%d\n", status);
    // exit(-1);
@@ -228,7 +228,7 @@ int zgt_tm::chooseVictim()
 
    pthread_t thread1;
    int status;
-   //   status=pthread_create(&thread1, NULL,choosevictim,(void*)NULL);	// Fork a thread and pass tid
+   //   status=pthread_create(&thread1, NULL,choosevictim,(void*)NULL);  // Fork a thread and pass tid
    // if (status){
    // printf("ERROR: return code from pthread_create() is:%d\n", status);
    // exit(-1);
@@ -286,7 +286,7 @@ zgt_tm::zgt_tm()
    ZGT_Key_sem = TEAM_NO; // setting the key_t data to const
 
    // semget() gets a array of semaphore for a particular key.Here
-   //	creating a semaphore with  key 1
+   //  creating a semaphore with  key 1
 
    if ((sem = zgt_init_sema(IPC_CREAT)) < 0)
    {

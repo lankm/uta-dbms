@@ -105,7 +105,7 @@ int main(int argn, char **argv)
     else if (tokens[0] == "LogFile" || tokens[0] == "logfile")
     {
       cout << "Log file name:" << tokens[1] << "\n\n";
-      //	printf("\nLog :", tokens[1]);
+      //  printf("\nLog :", tokens[1]);
       ZGT_Sh->openlog(tokens[1]);
     }
 
