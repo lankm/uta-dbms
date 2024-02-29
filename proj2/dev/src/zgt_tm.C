@@ -13,7 +13,7 @@
 #include "zgt_tm.h"
 #include "zgt_extern.h"
 
-#define TEAM_NO 88 // insert your team number here
+#define TEAM_NO 1 // insert your team number here
 
 // Modified to fix handling with 'end all' as last input
 
