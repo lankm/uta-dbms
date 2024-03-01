@@ -4,3 +4,4 @@
 *.log
 
 zgt_test
+.vscode/settings.json
