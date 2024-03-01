@@ -1,6 +1,0 @@
-{
-    "java.project.referencedLibraries": [
-        "lib/**/*.jar",
-        "proj1/dev/lib/btreelib.jar"
-    ]
-}
