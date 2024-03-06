@@ -56,7 +56,7 @@ void zgt_tm::openlog(string lfile)
   fflush(stdout);
 #endif
 }
-
+// TODO =======================================================================
 int zgt_tm::BeginTx(long tid, int thrNum, char type)
 {
 
@@ -145,7 +145,7 @@ int zgt_tm::AbortTx(long tid, int thrNum)
   // write your code
   return (0); // successful operation
 }
-
+// ============================================================================
 int zgt_tm::endTm(int thrNum)
 {
   int rc = 0;

@@ -94,7 +94,7 @@ void *begintx(void *arg)
   finish_operation(node->tid);
   pthread_exit(NULL); // thread exit
 }
-
+// TODO =======================================================================
 /* Method to handle Readtx action in test file    */
 /* Inputs a pointer to structure that contans     */
 /* tx id and object no to read. Reads the object  */
@@ -152,7 +152,7 @@ void *do_commit_abort_operation(long t, char status)
 
   // write your code
 }
-
+// ============================================================================
 int zgt_tx::remove_tx()
 {
   // remove the transaction from the TM
