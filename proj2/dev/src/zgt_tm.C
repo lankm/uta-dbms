@@ -38,20 +38,21 @@ void zgt_tm::openlog(string lfile)
 // ASantra [2/12/2024]: Commented out to properly name logfiles
 // logfilename[--i] = '\0';
 #ifdef TM_DEBUG
-  printf("\nGiven log file name: %s\n", logfile);
+  // LMoon [3/7/2024]: changed from logfile to logfilename
+  printf("Given log file name: %s\n", logfilename);
   fflush(stdout);
 #endif
   if ((this->logfile = fopen(this->logfilename, "w")) == NULL)
   {
-    printf("\nCannot open log file for write/append:%s\n", logfilename);
+    printf("Cannot open log file for write/append:%s\n", logfilename);
     fflush(stdout);
     exit(1);
   }
   fprintf(this->logfile, "---------------------------------------------------------------------------\n");
-  fprintf(this->logfile, "TxId\tTxtype\tOperation\tObId:Obvalue:optime\tLockType\tStatus\t\tTxStatus\n");
+  fprintf(this->logfile, "TxId\tTxtype\tOperation\tObId:Obvalue:optime\tLockType\tStatus\tTxStatus\n");
   fflush(this->logfile);
 #ifdef TM_DEBUG
-  printf("leaving openlog\n");
+  printf("leaving openlog\n\n");
   fflush(stdout);
   fflush(stdout);
 #endif
@@ -65,7 +66,7 @@ int zgt_tm::BeginTx(long tid, int thrNum, char type)
   // begintx(void *thdarg) .Pass the thread arguments in a structure.
 
 #ifdef TM_DEBUG
-  printf("\ncreating BeginTx thread for Tx: %d\n", tid);
+  printf("creating BeginTx thread for Tx: %d\n", tid);
   fflush(stdout);
 #endif
   struct param *nodeinfo = (struct param *)malloc(sizeof(struct param));
@@ -82,13 +83,12 @@ int zgt_tm::BeginTx(long tid, int thrNum, char type)
     exit(-1);
   }
 #ifdef TM_DEBUG
-  printf("\nfinished creating BeginTx thread for Tx: %d\n", tid);
+  printf("finished creating BeginTx thread for Tx: %d\n\n", tid);
   fflush(stdout);
 #endif
   return (0);
 }
 
-//TODO
 int zgt_tm::TxRead(long tid, long obno, int thrNum)
 {
   // again set the txmgr semaphore first. create a thread and first check
@@ -99,7 +99,7 @@ int zgt_tm::TxRead(long tid, long obno, int thrNum)
   // now create the thread and call the method readtx(void *)
 
 #ifdef TM_DEBUG
-  printf("\ncreating TxRead thread for Tx: %d\n", tid);
+  printf("creating TxRead thread for Tx: %d\n", tid);
   fflush(stdout);
   fflush(stdout);
 #endif
@@ -119,28 +119,93 @@ int zgt_tm::TxRead(long tid, long obno, int thrNum)
   }
 
 #ifdef TM_DEBUG
-  printf("\nexiting TxRead thread create for Tx: %d\n", tid);
+  printf("exiting TxRead thread create for Tx: %d\n\n", tid);
   fflush(stdout);
 #endif
   return (0); // successful operation
 }
 int zgt_tm::TxWrite(long tid, long obno, int thrNum)
 {
-  // call the write function (writetx); same as above
+#ifdef TM_DEBUG
+  printf("creating TxWrite thread for Tx: %d\n", tid);
+  fflush(stdout);
+  fflush(stdout);
+#endif
+  pthread_t thread1;
 
-  // write your code
+  struct param *nodeinfo = (struct param *)malloc(sizeof(struct param));
+  nodeinfo->tid = tid;
+  nodeinfo->obno = obno;
+  nodeinfo->Txtype = ' ';
+  nodeinfo->count = --SEQNUM[tid];
+  int status;
+  status = pthread_create(&threadid[thrNum], NULL, writetx, (void *)nodeinfo);
+  if (status)
+  {
+    printf("ERROR: return code from pthread_create() is:%d\n", status);
+    exit(-1);
+  }
 
+#ifdef TM_DEBUG
+  printf("exiting TxWrite thread create for Tx: %d\n\n", tid);
+  fflush(stdout);
+#endif
   return (0); // successful operation
 }
 int zgt_tm::CommitTx(long tid, int thrNum)
 {
+#ifdef TM_DEBUG
+  printf("creating CommitTx thread for Tx: %d\n", tid);
+  fflush(stdout);
+  fflush(stdout);
+#endif
+  pthread_t thread1;
 
-  // write your code
+  struct param *nodeinfo = (struct param *)malloc(sizeof(struct param));
+  nodeinfo->tid = tid;
+  nodeinfo->obno = -1;
+  nodeinfo->Txtype = ' ';
+  nodeinfo->count = --SEQNUM[tid];
+  int status;
+  status = pthread_create(&threadid[thrNum], NULL, committx, (void *)nodeinfo);
+  if (status)
+  {
+    printf("ERROR: return code from pthread_create() is:%d\n", status);
+    exit(-1);
+  }
+
+#ifdef TM_DEBUG
+  printf("exiting CommitTx thread create for Tx: %d\n\n", tid);
+  fflush(stdout);
+#endif
   return (0); // successful operation
 }
 int zgt_tm::AbortTx(long tid, int thrNum)
 {
-  // write your code
+#ifdef TM_DEBUG
+  printf("creating AbortTx thread for Tx: %d\n", tid);
+  fflush(stdout);
+  fflush(stdout);
+#endif
+  pthread_t thread1;
+
+  struct param *nodeinfo = (struct param *)malloc(sizeof(struct param));
+  nodeinfo->tid = tid;
+  nodeinfo->obno = -1;
+  nodeinfo->Txtype = ' ';
+  nodeinfo->count = --SEQNUM[tid];
+  int status;
+  status = pthread_create(&threadid[thrNum], NULL, aborttx, (void *)nodeinfo);
+  if (status)
+  {
+    printf("ERROR: return code from pthread_create() is:%d\n", status);
+    exit(-1);
+  }
+
+#ifdef TM_DEBUG
+  printf("exiting AbortTx thread create for Tx: %d\n\n", tid);
+  fflush(stdout);
+#endif
   return (0); // successful operation
 }
 
@@ -243,7 +308,7 @@ zgt_tm::zgt_tm()
 {
 
 #ifdef TM_DEBUG
-  printf("\nInitializing the TM\n");
+  printf("Initializing the TM\n");
   fflush(stdout);
 #endif
   int i, init;
@@ -299,7 +364,7 @@ zgt_tm::zgt_tm()
   zgt_init_sema_rest(ZGT_Semid);
 
 #ifdef TM_DEBUG
-  printf("\nleaving TM initialization\n");
+  printf("leaving TM initialization\n\n");
   fflush(stdout);
 #endif
 };

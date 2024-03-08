@@ -65,100 +65,6 @@ zgt_tx *get_tx(long tid1)
   return (NULL); // if list is empty return NULL
 }
 
-/* Method that handles "BeginTx tid" in test file     */
-/* Inputs a pointer to transaction id, obj pair as a struct. Creates a new  */
-/* transaction node, initializes its data members and */
-/* adds it to transaction list */
-
-void *begintx(void *arg)
-{
-  // intialise a transaction object. Make sure it is
-  // done after acquiring the semaphore for the tm and making sure that
-  // the operation can proceed using the condition variable. When creating
-  // the tx object, set the tx to TR_ACTIVE and obno to -1; there is no
-  // semno as yet as none is waiting on this tx.
-
-  struct param *node = (struct param *)arg; // get tid and count
-  start_operation(node->tid, node->count);
-  zgt_tx *tx = new zgt_tx(node->tid, TR_ACTIVE, node->Txtype, pthread_self()); // Create new tx node
-
-  // Writes the Txtype to the file.
-
-  zgt_p(0); // Lock Tx manager; Add node to transaction list
-  tx->nextr = ZGT_Sh->lastr;
-  ZGT_Sh->lastr = tx;
-  zgt_v(0); // Release tx manager
-  fprintf(ZGT_Sh->logfile, "T%d\t%c \tBeginTx\n", node->tid, node->Txtype); // Write log record and close
-  fflush(ZGT_Sh->logfile);
-  finish_operation(node->tid);
-  pthread_exit(NULL); // thread exit
-}
-
-/* Method to handle Readtx action in test file    */
-/* Inputs a pointer to structure that contans     */
-/* tx id and object no to read. Reads the object  */
-/* if the object is not yet present in hash table */
-/* or same tx holds a lock on it. Otherwise waits */
-/* until the lock is released */
-
-//TODO
-void *readtx(void *arg)
-{
-  struct param *node = (struct param *)arg; // get tid and objno and count
-  fprintf(ZGT_Sh->logfile, "T%-6d\t\tReadTx\t\t%d:%d:%d\t\tReadLock\tGranted\tP", node->tid, node->obno, ZGT_Sh->optime[node->tid]);
-  
-  // do the operations for reading. Write your code
-}
-
-//TODO
-void *writetx(void *arg)
-{                                           // do the operations for writing; similar to readTx
-  struct param *node = (struct param *)arg; // struct parameter that contains
-
-  // do the operations for writing; similar to readTx. Write your code
-}
-
-// common method to process read/write: Just a suggestion
-
-//TODO?
-void *process_read_write_operation(long tid, long obno, int count, char mode)
-{
-}
-
-//TODO
-void *aborttx(void *arg)
-{
-  struct param *node = (struct param *)arg; // get tid and count
-
-  // write your code
-
-  pthread_exit(NULL); // thread exit
-}
-
-//TODO
-void *committx(void *arg)
-{
-
-  // remove the locks/objects before committing
-  struct param *node = (struct param *)arg; // get tid and count
-
-  // write your code
-  pthread_exit(NULL); // thread exit
-}
-
-// suggestion as they are very similar
-
-// called from commit/abort with appropriate parameter to do the actual
-// operation. Make sure you give error messages if you are trying to
-// commit/abort a non-existent tx
-
-//TODO?
-void *do_commit_abort_operation(long t, char status)
-{
-
-  // write your code
-}
-
 int zgt_tx::remove_tx()
 {
   // remove the transaction from the TM
@@ -183,11 +89,165 @@ int zgt_tx::remove_tx()
   return (-1);
 }
 
-/* this method sets lock on objno1 with lockmode1 for a tx*/
+/* Method that handles "BeginTx tid" in test file     */
+/* Inputs a pointer to transaction id, obj pair as a struct. Creates a new  */
+/* transaction node, initializes its data members and */
+/* adds it to transaction list */
+
+void *begintx(void *arg)
+{
+  // intialise a transaction object. Make sure it is
+  // done after acquiring the semaphore for the tm and making sure that
+  // the operation can proceed using the condition variable. When creating
+  // the tx object, set the tx to TR_ACTIVE and obno to -1; there is no
+  // semno as yet as none is waiting on this tx.
+
+  struct param *node = (struct param *)arg; // get tid and count
+
+  start_operation(node->tid, node->count);
+
+  zgt_tx *tx = new zgt_tx(node->tid, TR_ACTIVE, node->Txtype, pthread_self()); // Create new tx node
+  zgt_p(0); // Lock Tx manager; Add node to transaction list
+  tx->nextr = ZGT_Sh->lastr;
+  ZGT_Sh->lastr = tx;
+  zgt_v(0); // Release tx manager
+
+  fprintf(ZGT_Sh->logfile, "T%d\t%c\tBeginTx\n", node->tid, node->Txtype); // Write log record and close
+  fflush(ZGT_Sh->logfile);
+
+  finish_operation(node->tid);
+
+  pthread_exit(NULL); // thread exit
+}
+
+/* Method to handle Readtx action in test file    */
+/* Inputs a pointer to structure that contans     */
+/* tx id and object no to read. Reads the object  */
+/* if the object is not yet present in hash table */
+/* or same tx holds a lock on it. Otherwise waits */
+/* until the lock is released */
+
+void *readtx(void *arg)
+{
+  struct param *node = (struct param *)arg; // get tid and objno and count
+  process_read_write_operation(node->tid, node->obno, node->count, 'r');
+}
+void *writetx(void *arg)
+{                                           // do the operations for writing; similar to readTx
+  struct param *node = (struct param *)arg; // struct parameter that contains
+  process_read_write_operation(node->tid, node->obno, node->count, 'w');
+}
+//TODO
+void *process_read_write_operation(long tid, long obno, int count, char mode)
+{
+  if(mode != 'r' || mode != 'w') {
+    //TODO throw an input error in some way. mode is not 'r' or 'w'
+  }
+  
+  const char* Operation;
+  const char* LockType;
+  const char* Status;
+  char TxStatus;
+  if(mode == 'r') {
+    Operation = "ReadTx";
+    LockType = "ReadLock";
+
+    //TODO
+    // [LMoon] do some stuff with obno and the hash table. check for locks and such.
+    // [LMoon] call perform_read_write_operation() which will do something
+    Status = "Granted";
+    TxStatus = 'P';
+
+  } else if(mode == 'w') {
+    Operation = "WriteTx";
+    LockType = "WriteLock";
+
+    //TODO
+    // [LMOON] do some stuff with obno and the hash table. check for locks and such.
+    Status = "Granted";
+    TxStatus = 'P';
+
+  }
+  
+  // Write to log
+  fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t%d:%d:%d\t%s\t%s\t%c\n",
+           tid, ' ', Operation, obno, 0/*REPLACE with val from hashtable*/, ZGT_Sh->optime[tid], LockType, Status, TxStatus);
+  fflush(ZGT_Sh->logfile);
+  
+  pthread_exit(NULL); // thread exit
+}
+//TODO 
+void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
+{
+  // bool lockedByMe = false;
+  // if(lockedByMe){
+  //   // grant lock
+  //   return;
+  // }
+
+  // if(lockmode == "S"){
+  //   bool lockedByAnother = false;
+  //   if(!lockedByAnother){
+  //     //grant lock
+  //     return;
+  //   } else {
+  //     if(otherLockIsExclusive){
+  //       // put on queue
+  //     } else {
+  //       bool queueEmpty = true;
+  //       if(queueEmpty){
+  //         // grant lock
+  //         return;
+  //       }
+  //       // put on queue
+  //     }
+  //   }
+  // } else {
+  //   bool lockedByAnother = false;
+  //   if(!lockedByAnother){
+  //     //grant lock
+  //     return;
+  //   } else {
+  //     // put on queue
+  //   }
+  // }
+
+  // write your code
+}
+
+//TODO
+void *aborttx(void *arg)
+{
+  struct param *node = (struct param *)arg; // get tid and count
+  do_commit_abort_operation(node->tid, 'a'); // [LMoon] not sure if 'a' is correct. find how node->count works
+}
+//TODO
+void *committx(void *arg)
+{
+  // remove the locks/objects before committing
+  struct param *node = (struct param *)arg; // get tid and count
+  do_commit_abort_operation(node->tid, 'c'); // [LMoon] not sure if 'c' is correct. find how node->count works
+}
+//TODO
+void *do_commit_abort_operation(long tid, char status)
+{
+  // suggestion as they are very similar
+
+  // called from commit/abort with appropriate parameter to do the actual
+  // operation. Make sure you give error messages if you are trying to
+  // commit/abort a non-existent tx
+
+  // [LMoon] when commiting, use free_locks()???
+  // [LMoon] look through end_tx() below
+
+  pthread_exit(NULL); // thread exit
+}
 
 //TODO
 int zgt_tx::set_lock(long tid1, long sgno1, long obno1, int count, char lockmode1)
 {
+  /* this method sets lock on objno1 with lockmode1 for a tx*/
+
   // if the thread has to wait, block the thread on a semaphore from the
   // sempool in the transaction manager. Set the appropriate parameters in the
   // transaction list if waiting.
@@ -318,44 +378,6 @@ void zgt_tx::print_lock()
   printf("\n");
 }
 
-//TODO 
-void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
-{
-  // bool lockedByMe = false;
-  // if(lockedByMe){
-  //   // grant lock
-  //   return;
-  // }
-
-  // if(lockmode == "S"){
-  //   bool lockedByAnother = false;
-  //   if(!lockedByAnother){
-  //     //grant lock
-  //     return;
-  //   } else {
-  //     if(otherLockIsExclusive){
-  //       // put on queue
-  //     } else {
-  //       bool queueEmpty = true;
-  //       if(queueEmpty){
-  //         // grant lock
-  //         return;
-  //       }
-  //       // put on queue
-  //     }
-  //   }
-  // } else {
-  //   bool lockedByAnother = false;
-  //   if(!lockedByAnother){
-  //     //grant lock
-  //     return;
-  //   } else {
-  //     // put on queue
-  //   }
-  // }
-
-  // write your code
-}
 
 // routine that sets the semno in the Tx when another tx waits on it.
 // the same number is the same as the tx number on which a Tx is waiting
@@ -396,7 +418,7 @@ void *start_operation(long tid, long count)
     pthread_cond_wait(&ZGT_Sh->condpool[tid], &ZGT_Sh->mutexpool[tid]);
 }
 
-// Otherside of teh start operation;
+// Otherside of the start operation;
 // signals the conditional broadcast
 
 void *finish_operation(long tid)

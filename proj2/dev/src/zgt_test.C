@@ -95,7 +95,8 @@ int main(int argn, char **argv)
   while (!inFile.eof())
   {
     s = str;
-    cout << s << "\n";
+    // [LMoon: 3/7/2024] Commented out to avoid duplication
+    // cout << s << "\n";
     string tokens[MAX_TOKENS];
     Tokenize(s, tokens);
 
@@ -104,7 +105,7 @@ int main(int argn, char **argv)
       cout << s << "\n";
     else if (tokens[0] == "LogFile" || tokens[0] == "logfile")
     {
-      cout << "Log file name:" << tokens[1] << "\n\n";
+      cout << "Log file name: " << tokens[1] << "\n\n";
       //  printf("\nLog :", tokens[1]);
       ZGT_Sh->openlog(tokens[1]);
     }
@@ -116,8 +117,8 @@ int main(int argn, char **argv)
       // Passing the Txtype to get the transaction type.
       strcpy(temp, tokens[2].c_str());
       Txtype = temp[0];
-      printf("BeginTx : %d\n\n", tid);
-      printf("TxType : %c\n\n", Txtype);
+      printf("BeginTx : %d\n", tid);
+      printf("TxType : %c\n", Txtype);
       if ((op = ZGT_Sh->BeginTx(tid, thrNum++, Txtype)) < 0)
         cout << "\nerro from:" << tokens[0] << " for TID:" << tid << "\n";
       //        {  //error code }
@@ -130,7 +131,7 @@ int main(int argn, char **argv)
       k = string2int(c, tokens[2]);
       obno = k;
       //    cout << "\nRead: " << tid << " : " << obno;
-      printf("Read : %d : %d\n\n", tid, obno);
+      printf("Read : %d : %d\n", tid, obno);
       if ((op = ZGT_Sh->TxRead(tid, obno, thrNum++)) < 0)
         cout << "\nerro from:" << tokens[0] << " for TID:" << tid << "\n";
       //  { //error code }
@@ -144,7 +145,7 @@ int main(int argn, char **argv)
       obno = k;
 
       //      cout << "\nwrite: " << tid << " : " << obno;
-      printf("Write : %d : %d\n\n", tid, obno);
+      printf("Write : %d : %d\n", tid, obno);
       if ((op = ZGT_Sh->TxWrite(tid, obno, thrNum++)) < 0)
         cout << "\nerro from:" << tokens[0] << " for TID:" << tid << "\n";
       // { //error code}
@@ -155,14 +156,14 @@ int main(int argn, char **argv)
       tid = k;
 
       //     cout << "\nAbort: " << tid;
-      printf("Abort : %d\n\n", tid);
+      printf("Abort : %d\n", tid);
       if ((op = ZGT_Sh->AbortTx(tid, thrNum++)) < 0)
         cout << "\nerro from:" << tokens[0] << " for TID:" << tid << "\n";
       // { //error code}
     }
     else if (tokens[0] == "Commit" || tokens[0] == "commit")
     {
-      printf("Commit : %d\n\n", tid);
+      printf("Commit : %d\n", tid);
       int k = string2int(c, tokens[1]);
       tid = k;
       if ((op = ZGT_Sh->CommitTx(tid, thrNum++)) < 0)
