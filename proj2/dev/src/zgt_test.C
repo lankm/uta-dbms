@@ -122,7 +122,6 @@ int main(int argn, char **argv)
         cout << "\nerro from:" << tokens[0] << " for TID:" << tid << "\n";
       //        {  //error code }
     }
-
     else if (tokens[0] == "Read" || tokens[0] == "read")
     {
       int k = string2int(c, tokens[1]);
@@ -136,7 +135,6 @@ int main(int argn, char **argv)
         cout << "\nerro from:" << tokens[0] << " for TID:" << tid << "\n";
       //  { //error code }
     }
-
     else if (tokens[0] == "Write" || tokens[0] == "write")
     {
       int k = string2int(c, tokens[1]);
@@ -162,7 +160,6 @@ int main(int argn, char **argv)
         cout << "\nerro from:" << tokens[0] << " for TID:" << tid << "\n";
       // { //error code}
     }
-
     else if (tokens[0] == "Commit" || tokens[0] == "commit")
     {
       printf("Commit : %d\n\n", tid);
@@ -172,6 +169,7 @@ int main(int argn, char **argv)
         cout << "\nerro from:" << tokens[0] << " for TID:" << tid << "\n";
       //  { //error code}
     }
+    
     else if (tokens[0] == "Detect" || tokens[0] == "detect")
     {
       printf("Detect Cycles :\n\n");

@@ -85,16 +85,15 @@ void *begintx(void *arg)
   // Writes the Txtype to the file.
 
   zgt_p(0); // Lock Tx manager; Add node to transaction list
-
   tx->nextr = ZGT_Sh->lastr;
   ZGT_Sh->lastr = tx;
-  zgt_v(0);                                                                 // Release tx manager
+  zgt_v(0); // Release tx manager
   fprintf(ZGT_Sh->logfile, "T%d\t%c \tBeginTx\n", node->tid, node->Txtype); // Write log record and close
   fflush(ZGT_Sh->logfile);
   finish_operation(node->tid);
   pthread_exit(NULL); // thread exit
 }
-// TODO =======================================================================
+
 /* Method to handle Readtx action in test file    */
 /* Inputs a pointer to structure that contans     */
 /* tx id and object no to read. Reads the object  */
@@ -102,13 +101,16 @@ void *begintx(void *arg)
 /* or same tx holds a lock on it. Otherwise waits */
 /* until the lock is released */
 
+//TODO
 void *readtx(void *arg)
 {
   struct param *node = (struct param *)arg; // get tid and objno and count
-
+  fprintf(ZGT_Sh->logfile, "T%-6d\t\tReadTx\t\t%d:%d:%d\t\tReadLock\tGranted\tP", node->tid, node->obno, ZGT_Sh->optime[node->tid]);
+  
   // do the operations for reading. Write your code
 }
 
+//TODO
 void *writetx(void *arg)
 {                                           // do the operations for writing; similar to readTx
   struct param *node = (struct param *)arg; // struct parameter that contains
@@ -118,10 +120,12 @@ void *writetx(void *arg)
 
 // common method to process read/write: Just a suggestion
 
+//TODO?
 void *process_read_write_operation(long tid, long obno, int count, char mode)
 {
 }
 
+//TODO
 void *aborttx(void *arg)
 {
   struct param *node = (struct param *)arg; // get tid and count
@@ -131,6 +135,7 @@ void *aborttx(void *arg)
   pthread_exit(NULL); // thread exit
 }
 
+//TODO
 void *committx(void *arg)
 {
 
@@ -147,12 +152,13 @@ void *committx(void *arg)
 // operation. Make sure you give error messages if you are trying to
 // commit/abort a non-existent tx
 
+//TODO?
 void *do_commit_abort_operation(long t, char status)
 {
 
   // write your code
 }
-// ============================================================================
+
 int zgt_tx::remove_tx()
 {
   // remove the transaction from the TM
@@ -179,6 +185,7 @@ int zgt_tx::remove_tx()
 
 /* this method sets lock on objno1 with lockmode1 for a tx*/
 
+//TODO
 int zgt_tx::set_lock(long tid1, long sgno1, long obno1, int count, char lockmode1)
 {
   // if the thread has to wait, block the thread on a semaphore from the
@@ -311,11 +318,41 @@ void zgt_tx::print_lock()
   printf("\n");
 }
 
-// routine to perform the actual read/write operation as described the project description
-// based  on the lockmode
-
+//TODO 
 void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
 {
+  // bool lockedByMe = false;
+  // if(lockedByMe){
+  //   // grant lock
+  //   return;
+  // }
+
+  // if(lockmode == "S"){
+  //   bool lockedByAnother = false;
+  //   if(!lockedByAnother){
+  //     //grant lock
+  //     return;
+  //   } else {
+  //     if(otherLockIsExclusive){
+  //       // put on queue
+  //     } else {
+  //       bool queueEmpty = true;
+  //       if(queueEmpty){
+  //         // grant lock
+  //         return;
+  //       }
+  //       // put on queue
+  //     }
+  //   }
+  // } else {
+  //   bool lockedByAnother = false;
+  //   if(!lockedByAnother){
+  //     //grant lock
+  //     return;
+  //   } else {
+  //     // put on queue
+  //   }
+  // }
 
   // write your code
 }

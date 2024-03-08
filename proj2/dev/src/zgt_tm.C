@@ -56,7 +56,7 @@ void zgt_tm::openlog(string lfile)
   fflush(stdout);
 #endif
 }
-// TODO =======================================================================
+
 int zgt_tm::BeginTx(long tid, int thrNum, char type)
 {
 
@@ -88,6 +88,7 @@ int zgt_tm::BeginTx(long tid, int thrNum, char type)
   return (0);
 }
 
+//TODO
 int zgt_tm::TxRead(long tid, long obno, int thrNum)
 {
   // again set the txmgr semaphore first. create a thread and first check
@@ -123,7 +124,6 @@ int zgt_tm::TxRead(long tid, long obno, int thrNum)
 #endif
   return (0); // successful operation
 }
-
 int zgt_tm::TxWrite(long tid, long obno, int thrNum)
 {
   // call the write function (writetx); same as above
@@ -132,20 +132,18 @@ int zgt_tm::TxWrite(long tid, long obno, int thrNum)
 
   return (0); // successful operation
 }
-
 int zgt_tm::CommitTx(long tid, int thrNum)
 {
 
   // write your code
   return (0); // successful operation
 }
-
 int zgt_tm::AbortTx(long tid, int thrNum)
 {
   // write your code
   return (0); // successful operation
 }
-// ============================================================================
+
 int zgt_tm::endTm(int thrNum)
 {
   int rc = 0;

@@ -25,4 +25,17 @@ The language for this assignment is C++. The skeleton code given by the professo
 
 - Manually fix semaphores after crash/termination (ipcs_cleanup.sh)
 - sem<SHARED_MEM_AVAIL> used for accessing the hash map
-- 
+
+### Code Readthrough Notes
+- The 'optime' (operation time) is randomized for each operation. Array of optimes are defined in the constructor for zgt_tm()
+
+### CMD quick access
+- sample cmd exec:
+    - make clean
+    - make
+    - ./zgt_test ..test-files/deadlock.txt
+- clear semaphores:
+    - sh ipcs_cleanup.sh
+    - ./ipcs_cleanup.sh
+- see system semaphores
+    - ipcs
