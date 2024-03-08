@@ -50,6 +50,7 @@ Some logical errors were avoided before they cropped up through the use of pair 
    - fixed openlog() so logfilename is printed correctly.
    - changed spacing of print statements such that data relating to one operation is grouped together. (removing duplicate \n)
    - changed the order of functions in zgt_tx to make the code more readable and to outline our work
+   - made commit print out correct transaction id. Only effected print, not execution
 
    As a last bit of complaint about the skeleton code. It is not C++, it is a C/C++ amalgamation.
 

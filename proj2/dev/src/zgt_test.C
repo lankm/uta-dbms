@@ -163,9 +163,9 @@ int main(int argn, char **argv)
     }
     else if (tokens[0] == "Commit" || tokens[0] == "commit")
     {
-      printf("Commit : %d\n", tid);
       int k = string2int(c, tokens[1]);
       tid = k;
+      printf("Commit : %d\n", tid);
       if ((op = ZGT_Sh->CommitTx(tid, thrNum++)) < 0)
         cout << "\nerro from:" << tokens[0] << " for TID:" << tid << "\n";
       //  { //error code}
