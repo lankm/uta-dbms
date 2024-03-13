@@ -341,8 +341,8 @@ zgt_tm::zgt_tm()
   {
     pthread_mutex_init(&mutexpool[i], NULL);
     pthread_cond_init(&condpool[i], NULL);
-    condset[i] = 0;
-    SEQNUM[i] = 0;
+    condset[i] = 0; // [LMoon] decremented when operation finishes. Used to make sure transactions run in order
+    SEQNUM[i] = 0;  // [LMoon] decremented when operation starts. Used to make sure transactions run in order
   }
   ZGT_Nsema = MAX_TRANSACTIONS + 1; // setting the no of semaphore
 

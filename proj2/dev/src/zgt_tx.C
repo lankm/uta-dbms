@@ -130,12 +130,22 @@ void *begintx(void *arg)
 void *readtx(void *arg)
 {
   struct param *node = (struct param *)arg; // get tid and objno and count
+  start_operation(node->tid, node->count); // wait for previous thread of same transaction to end.
+
   process_read_write_operation(node->tid, node->obno, node->count, 'r');
+
+  finish_operation(node->tid);
+  pthread_exit(NULL); // thread exit
 }
 void *writetx(void *arg)
 {                                           // do the operations for writing; similar to readTx
   struct param *node = (struct param *)arg; // struct parameter that contains
+  start_operation(node->tid, node->count); // wait for previous thread of same transaction to end.
+
   process_read_write_operation(node->tid, node->obno, node->count, 'w');
+
+  finish_operation(node->tid);
+  pthread_exit(NULL); // thread exit
 }
 //TODO
 void *process_read_write_operation(long tid, long obno, int count, char mode)
@@ -173,60 +183,35 @@ void *process_read_write_operation(long tid, long obno, int count, char mode)
   fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t%d:%d:%d\t%s\t%s\t%c\n",
            tid, ' ', Operation, obno, 0/*REPLACE with val from hashtable*/, ZGT_Sh->optime[tid], LockType, Status, TxStatus);
   fflush(ZGT_Sh->logfile);
-  
-  pthread_exit(NULL); // thread exit
 }
 //TODO 
 void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
 {
-  // bool lockedByMe = false;
-  // if(lockedByMe){
-  //   // grant lock
-  //   return;
-  // }
-
-  // if(lockmode == "S"){
-  //   bool lockedByAnother = false;
-  //   if(!lockedByAnother){
-  //     //grant lock
-  //     return;
-  //   } else {
-  //     if(otherLockIsExclusive){
-  //       // put on queue
-  //     } else {
-  //       bool queueEmpty = true;
-  //       if(queueEmpty){
-  //         // grant lock
-  //         return;
-  //       }
-  //       // put on queue
-  //     }
-  //   }
-  // } else {
-  //   bool lockedByAnother = false;
-  //   if(!lockedByAnother){
-  //     //grant lock
-  //     return;
-  //   } else {
-  //     // put on queue
-  //   }
-  // }
+  // ASantra[2/12/2024]: Added as a method to perform actual read/write operation in Spring 2024
 
   // write your code
 }
 
-//TODO
 void *aborttx(void *arg)
 {
   struct param *node = (struct param *)arg; // get tid and count
+  start_operation(node->tid, node->count); // wait for previous thread of same transaction to end.
+
   do_commit_abort_operation(node->tid, 'a'); // [LMoon] not sure if 'a' is correct. find how node->count works
+
+  finish_operation(node->tid);
+  pthread_exit(NULL); // thread exit
 }
-//TODO
 void *committx(void *arg)
 {
   // remove the locks/objects before committing
   struct param *node = (struct param *)arg; // get tid and count
+  start_operation(node->tid, node->count);
+
   do_commit_abort_operation(node->tid, 'c'); // [LMoon] not sure if 'c' is correct. find how node->count works
+
+  finish_operation(node->tid);
+  pthread_exit(NULL); // thread exit
 }
 //TODO
 void *do_commit_abort_operation(long tid, char status)
@@ -239,8 +224,11 @@ void *do_commit_abort_operation(long tid, char status)
 
   // [LMoon] when commiting, use free_locks()???
   // [LMoon] look through end_tx() below
+  const char* Operation = "CommitTx";
 
-  pthread_exit(NULL); // thread exit
+  fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t0:0,0:0\n", // make a list of ObId:Obvalue and print it
+           tid, ' ', Operation);
+  fflush(ZGT_Sh->logfile);
 }
 
 //TODO
