@@ -41,7 +41,7 @@ public:
   pthread_mutex_t mutexpool[MAX_TRANSACTIONS + 1];
   pthread_cond_t condpool[MAX_TRANSACTIONS + 1];
   int condset[MAX_TRANSACTIONS + 1];
-  item *objarray[MAX_ITEMS];
+  item *objarray[MAX_ITEMS];   // location of object values, initialized to 0
   int optime[MAX_TRANSACTIONS + 1];
   int sem;
   char *logfilename; // logfile -> logfilename

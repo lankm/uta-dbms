@@ -181,7 +181,7 @@ void *process_read_write_operation(long tid, long obno, int count, char mode)
   
   // Write to log
   fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t%d:%d:%d\t%s\t%s\t%c\n",
-           tid, ' ', Operation, obno, 0/*REPLACE with val from hashtable*/, ZGT_Sh->optime[tid], LockType, Status, TxStatus);
+           tid, ' ', Operation, obno, ZGT_Sh->objarray[obno]->value, ZGT_Sh->optime[tid], LockType, Status, TxStatus);
   fflush(ZGT_Sh->logfile);
 }
 //TODO 
@@ -222,12 +222,22 @@ void *do_commit_abort_operation(long tid, char status)
   // operation. Make sure you give error messages if you are trying to
   // commit/abort a non-existent tx
 
-  // [LMoon] when commiting, use free_locks()???
-  // [LMoon] look through end_tx() below
-  const char* Operation = "CommitTx";
+  if(status != 'r' || status != 'w') {
+    //TODO throw an input error in some way. status is not 'c' or 'a'
+  }
+  
+  const char* Operation;
+  if(status == 'c') {
+    Operation = "CommitTx";
 
-  fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t0:0,0:0\n", // make a list of ObId:Obvalue and print it
+  } else if(status == 'a') {
+    Operation = "AbortTx";
+
+  }
+
+  fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t",
            tid, ' ', Operation);
+  // free_locks()
   fflush(ZGT_Sh->logfile);
 }
 
