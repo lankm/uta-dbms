@@ -35,7 +35,7 @@ TODO
     - 3/07/2024 - 3 hours - Learning the skeleton
     - 3/07/2024 - 3 hours - Fixing and cleaning up provided code
     - 3/13/2024 - 1 hour  - Made transaction operations run in order
-    - 3/13/2024 - 1 hour  - Found where object values are located
+    - 3/13/2024 - 2 hour  - Found where object values are located. read code
  - Jacob Holz
     - 2/29/2024 - 1 hour  - Learning the requirements
     - 3/07/2024 - 3 hours - Learning the skeleton
