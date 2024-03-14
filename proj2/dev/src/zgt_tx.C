@@ -153,43 +153,67 @@ void *process_read_write_operation(long tid, long obno, int count, char mode)
   if(mode != 'r' || mode != 'w') {
     //TODO throw an input error in some way. mode is not 'r' or 'w'
   }
-  
-  const char* Operation;
-  const char* LockType;
-  const char* Status;
-  char TxStatus;
-  if(mode == 'r') {
-    Operation = "ReadTx";
-    LockType = "ReadLock";
 
-    //TODO
-    // [LMoon] do some stuff with obno and the hash table. check for locks and such.
-    // [LMoon] call perform_read_write_operation() which will do something
-    Status = "Granted";
-    TxStatus = 'P';
+  zgt_tx *tx = get_tx(tid);
+  zgt_hlink *ob = ZGT_Ht->find(tx->sgno, obno);
+
+  if(mode == 'r') {
+    // if not already in ht
+    if(ob == NULL) {
+      // TODO add object to ht
+    } else {
+      // TODO try to gain lock
+      // TODO if unable, wait and check again
+
+      // make sure to change tx->status between 'P' and 'W' when needed.
+    }
 
   } else if(mode == 'w') {
-    Operation = "WriteTx";
-    LockType = "WriteLock";
+    // gaining lock of requested obno
+    if(ob == NULL) {
+      // TODO add object to ht with correct locktype
+    } else {
+      // TODO try to gain lock. 'no lock upgrades'
+      // TODO if unable, wait and check again
 
-    //TODO
-    // [LMOON] do some stuff with obno and the hash table. check for locks and such.
-    Status = "Granted";
-    TxStatus = 'P';
-
+      // make sure to change tx->status between 'P' and 'W' when needed.
+    }
   }
-  
-  // Write to log
-  fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t%d:%d:%d\t%s\t%s\t%c\n",
-           tid, ' ', Operation, obno, ZGT_Sh->objarray[obno]->value, ZGT_Sh->optime[tid], LockType, Status, TxStatus);
-  fflush(ZGT_Sh->logfile);
+
+  // once locks are retrieved, perform operations
+  tx->perform_read_write_operation(tid, obno, mode);
 }
-//TODO 
+//DONE. review
 void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
 {
-  // ASantra[2/12/2024]: Added as a method to perform actual read/write operation in Spring 2024
+  if(lockmode != 'r' || lockmode != 'w') {
+    //TODO throw an input error in some way. mode is not 'r' or 'w'
+  }
 
-  // write your code
+  // logging variables 
+  const char* Operation;
+  const char* LockType;
+  const char* Status = "Granted"; // guarenteed 'granted' from process_read_write_operation()
+
+  if(lockmode == 'r') {
+    ZGT_Sh->objarray[obno]->value -= 4; // if read, decrement by 4. [LMoon] @Jacobmpp, it's stated in the project description. Yes decrementing when we read is dumb.
+
+    Operation = "ReadTx";
+    LockType = "ReadLock";
+  } else if(lockmode == 'w') {
+    ZGT_Sh->objarray[obno]->value += 7; // if write, increment by 7.
+
+    Operation = "WriteTx";
+    LockType = "WriteLock";
+  }
+
+  // Write to log
+  fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t%d:%d:%d\t%s\t%s\t%c\n",
+           tid, ' ', Operation, obno, ZGT_Sh->objarray[obno]->value, ZGT_Sh->optime[tid], LockType, Status, this->status);
+  fflush(ZGT_Sh->logfile);
+
+  // sleep for optime in miliseconds
+  usleep(ZGT_Sh->optime[tid] * 1000);
 }
 
 void *aborttx(void *arg)
@@ -222,7 +246,7 @@ void *do_commit_abort_operation(long tid, char status)
   // operation. Make sure you give error messages if you are trying to
   // commit/abort a non-existent tx
 
-  if(status != 'r' || status != 'w') {
+  if(status != 'c' || status != 'a') {
     //TODO throw an input error in some way. status is not 'c' or 'a'
   }
   
@@ -237,7 +261,7 @@ void *do_commit_abort_operation(long tid, char status)
 
   fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t",
            tid, ' ', Operation);
-  // free_locks()
+  get_tx(tid)->free_locks();
   fflush(ZGT_Sh->logfile);
 }
 
