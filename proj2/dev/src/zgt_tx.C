@@ -153,35 +153,39 @@ void *process_read_write_operation(long tid, long obno, int count, char mode)
   if(mode != 'r' || mode != 'w') {
     //TODO throw an input error in some way. mode is not 'r' or 'w'
   }
-
+  
+  zgt_p(0);
   zgt_tx *tx = get_tx(tid);
-  zgt_hlink *ob = ZGT_Ht->find(tx->sgno, obno);
 
-  if(mode == 'r') {
-    // if not already in ht
-    if(ob == NULL) {
-      // TODO add object to ht
-    } else {
-      // TODO try to gain lock
-      // TODO if unable, wait and check again
-
-      // make sure to change tx->status between 'P' and 'W' when needed.
+  if(mode == 'r') { // READ operation. [LMoon] currently implemented like a write because of the read wierdness
+    // TODO move this logic to set_lock(). something along the lines of while(set_lock()==-1) {}
+   
+    // while not aborted and object is taken by other transaction
+    zgt_hlink *ob = ZGT_Ht->find(tx->sgno, obno);
+    while(tx->status != 'A' && ob != NULL) {
+      zgt_tx *othertx = get_tx(ob->tid);
+      if(othertx->semno == -1) {
+        othertx->semno = ob->tid;
+      }
+      zgt_v(0); // release tm
+      zgt_p(othertx->semno); // wait for transaction with lock to finish
+      zgt_p(0); // regain tm
+      ob = ZGT_Ht->find(tx->sgno, obno); // search if object has been created by other transaction
     }
 
-  } else if(mode == 'w') {
-    // gaining lock of requested obno
-    if(ob == NULL) {
-      // TODO add object to ht with correct locktype
-    } else {
-      // TODO try to gain lock. 'no lock upgrades'
-      // TODO if unable, wait and check again
-
-      // make sure to change tx->status between 'P' and 'W' when needed.
+    if(tx->status != 'A') {
+      ZGT_Ht->add(tx, tx->sgno, obno, 'S');
     }
+    zgt_v(0);
+  } else if(mode == 'w') { // WRITE operation
+    // TODO
+    zgt_v(0);
   }
 
-  // once locks are retrieved, perform operations
-  tx->perform_read_write_operation(tid, obno, mode);
+  // once locks are retrieved, perform operation if not aborted
+  if(tx->status != 'A') {
+    tx->perform_read_write_operation(tid, obno, mode);
+  }
 }
 //DONE. review
 void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
@@ -240,34 +244,48 @@ void *committx(void *arg)
 //TODO
 void *do_commit_abort_operation(long tid, char status)
 {
-  // suggestion as they are very similar
-
-  // called from commit/abort with appropriate parameter to do the actual
-  // operation. Make sure you give error messages if you are trying to
-  // commit/abort a non-existent tx
-
   if(status != 'c' || status != 'a') {
     //TODO throw an input error in some way. status is not 'c' or 'a'
   }
-  
+
+  // lock and get relevent data
+  zgt_p(0);
+  zgt_tx *tx = get_tx(tid);
+  if(tx == NULL) {
+    zgt_v(0);
+    printf("Tx with tid: %d does not exist", tid);
+    return NULL;
+  }
+
+  // housekeeping
   const char* Operation;
   if(status == 'c') {
     Operation = "CommitTx";
-
+    tx->status = 'E';
   } else if(status == 'a') {
     Operation = "AbortTx";
-
+    tx->status = 'A';
   }
 
+  // logging
   fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t",
            tid, ' ', Operation);
+  
+  // release resources
   get_tx(tid)->free_locks();
-  fflush(ZGT_Sh->logfile);
+  fflush(ZGT_Sh->logfile); // finish logging. free_locks() outputs
+  if(tx->semno != -1) {
+    zgt_v(tx->semno);
+  }
+  zgt_v(0);
 }
 
 //TODO
-int zgt_tx::set_lock(long tid1, long sgno1, long obno1, int count, char lockmode1)
+int zgt_tx::set_lock(long tid, long sgno, long obno, int count, char lockmode)
 {
+  zgt_tx *tx = get_tx(tid);
+
+  
   /* this method sets lock on objno1 with lockmode1 for a tx*/
 
   // if the thread has to wait, block the thread on a semaphore from the
