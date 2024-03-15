@@ -147,47 +147,31 @@ void *writetx(void *arg)
   finish_operation(node->tid);
   pthread_exit(NULL); // thread exit
 }
-//TODO
 void *process_read_write_operation(long tid, long obno, int count, char mode)
 {
   if(mode != 'r' || mode != 'w') {
     //TODO throw an input error in some way. mode is not 'r' or 'w'
   }
   
-  zgt_p(0);
+  // get reference to current transaction
   zgt_tx *tx = get_tx(tid);
-
-  if(mode == 'r') { // READ operation. [LMoon] currently implemented like a write because of the read wierdness
-    // TODO move this logic to set_lock(). something along the lines of while(set_lock()==-1) {}
-   
-    // while not aborted and object is taken by other transaction
-    zgt_hlink *ob = ZGT_Ht->find(tx->sgno, obno);
-    while(tx->status != 'A' && ob != NULL) {
-      zgt_tx *othertx = get_tx(ob->tid);
-      if(othertx->semno == -1) {
-        othertx->semno = ob->tid;
-      }
-      zgt_v(0); // release tm
-      zgt_p(othertx->semno); // wait for transaction with lock to finish
-      zgt_p(0); // regain tm
-      ob = ZGT_Ht->find(tx->sgno, obno); // search if object has been created by other transaction
-    }
-
-    if(tx->status != 'A') {
-      ZGT_Ht->add(tx, tx->sgno, obno, 'S');
-    }
-    zgt_v(0);
-  } else if(mode == 'w') { // WRITE operation
-    // TODO
-    zgt_v(0);
+  if(tx == NULL) {
+    printf("Tx with tid: %d does not exist", tid);
+    return NULL;
   }
 
-  // once locks are retrieved, perform operation if not aborted
+  if(mode == 'r') { // READ operation
+    while(tx->set_lock(tid, tx->sgno, obno, count, 'X') == -1) {} // exclusive due to read operations changing data
+
+  } else if(mode == 'w') { // WRITE operation
+    while(tx->set_lock(tid, tx->sgno, obno, count, 'X') == -1) {}
+  }
+
+  // once lock is retrieved, perform operation if not aborted
   if(tx->status != 'A') {
     tx->perform_read_write_operation(tid, obno, mode);
   }
 }
-//DONE. review
 void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
 {
   if(lockmode != 'r' || lockmode != 'w') {
@@ -241,7 +225,6 @@ void *committx(void *arg)
   finish_operation(node->tid);
   pthread_exit(NULL); // thread exit
 }
-//TODO
 void *do_commit_abort_operation(long tid, char status)
 {
   if(status != 'c' || status != 'a') {
@@ -280,12 +263,55 @@ void *do_commit_abort_operation(long tid, char status)
   zgt_v(0);
 }
 
-//TODO
 int zgt_tx::set_lock(long tid, long sgno, long obno, int count, char lockmode)
 {
-  zgt_tx *tx = get_tx(tid);
+  bool has_set = false;
 
-  
+  zgt_p(0);
+  zgt_hlink *ob = ZGT_Ht->find(this->sgno, obno);
+
+  // trying to gain a lock
+  if(lockmode == 'S') {
+    if(ob == NULL) { // if doesn't exist in ht
+      ZGT_Ht->add(this, this->sgno, obno, 'S');
+      has_set = true;
+
+    } else { // if exists
+      if(ob->lockmode == 'S') { // if shared
+        ZGT_Ht->add(this, this->sgno, obno, 'S'); // make entry for current transaction
+        has_set = true;
+
+      } else {  // if exclusive
+        // unable to lock due to an exclusive lock already existing
+        has_set = false;
+      }
+    }
+  } else if(lockmode == 'X') {
+    if(ob == NULL) { // if doesn't exist in ht
+      ZGT_Ht->add(this, this->sgno, obno, 'X');
+      has_set = true;
+
+    } else { // if exists
+      // unable to lock due to requiring an exclusive lock when a lock already exists
+      has_set = false;
+    }
+  }
+
+  // if set, continue. if not, wait
+  if(has_set) {
+    this->status = 'P';
+    zgt_v(0);
+    return 0;
+
+  } else {
+    this->status = 'W';
+    
+    zgt_tx *other = get_tx(ob->tid);
+    other->semno = ob->tid;
+    zgt_v(0);
+    zgt_p(other->semno); // wait for holding transaction to release
+    return -1;
+  }
   /* this method sets lock on objno1 with lockmode1 for a tx*/
 
   // if the thread has to wait, block the thread on a semaphore from the
@@ -319,7 +345,7 @@ int zgt_tx::free_locks()
     else
     {
 #ifdef TX_DEBUG
-      printf("\n:::Hash node with Tid:%d, obno:%d lockmode:%c removed\n",
+      printf(":::Hash node with Tid:%d, obno:%d lockmode:%c removed\n",
              temp->tid, temp->obno, temp->lockmode);
       fflush(stdout);
 #endif
