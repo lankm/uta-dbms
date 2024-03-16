@@ -18,6 +18,13 @@
 #include <iostream>
 #include <fstream>
 #include <pthread.h>
+#define READ_MODE 'R'
+#define WRITE_MODE 'W'
+#define EXCLUSIVE_LOCK 'X'
+#define SHARED_LOCK 'S'
+#define COMMIT 'c'
+#define ABORT 'a'
+#define NOT_BEGIN_TX ' '
 
 extern void *start_operation(long, long); // start an op with mutex lock and cond wait
 extern void *finish_operation(long);      // finish an op with mutex unlock and con signal
@@ -132,7 +139,7 @@ void *readtx(void *arg)
   struct param *node = (struct param *)arg; // get tid and objno and count
   start_operation(node->tid, node->count); // wait for previous thread of same transaction to end.
 
-  process_read_write_operation(node->tid, node->obno, node->count, 'r');
+  process_read_write_operation(node->tid, node->obno, node->count, READ_MODE);
 
   finish_operation(node->tid);
   pthread_exit(NULL); // thread exit
@@ -142,17 +149,13 @@ void *writetx(void *arg)
   struct param *node = (struct param *)arg; // struct parameter that contains
   start_operation(node->tid, node->count); // wait for previous thread of same transaction to end.
 
-  process_read_write_operation(node->tid, node->obno, node->count, 'w');
+  process_read_write_operation(node->tid, node->obno, node->count, WRITE_MODE);
 
   finish_operation(node->tid);
   pthread_exit(NULL); // thread exit
 }
 void *process_read_write_operation(long tid, long obno, int count, char mode)
 {
-  if(mode != 'r' || mode != 'w') {
-    //TODO throw an input error in some way. mode is not 'r' or 'w'
-  }
-  
   // get reference to current transaction
   zgt_tx *tx = get_tx(tid);
   if(tx == NULL) {
@@ -160,48 +163,44 @@ void *process_read_write_operation(long tid, long obno, int count, char mode)
     return NULL;
   }
 
-  if(mode == 'r') { // READ operation
-    while(tx->set_lock(tid, tx->sgno, obno, count, 'X') == -1) {} // exclusive due to read operations changing data
+  if(mode == READ_MODE) { // READ operation
+    while(tx->set_lock(tid, tx->sgno, obno, count, tx->Txtype == READ_MODE ? SHARED_LOCK : EXCLUSIVE_LOCK) == -1) {} // lock type based on transaction type
 
-  } else if(mode == 'w') { // WRITE operation
-    while(tx->set_lock(tid, tx->sgno, obno, count, 'X') == -1) {}
+  } else if(mode == WRITE_MODE) { // WRITE operation
+    while(tx->set_lock(tid, tx->sgno, obno, count, EXCLUSIVE_LOCK) == -1) {}
   }
 
   // once lock is retrieved, perform operation if not aborted
-  if(tx->status != 'A') {
+  if(tx->status != TR_ABORT) {
     tx->perform_read_write_operation(tid, obno, mode);
   }
 }
 void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
 {
-  if(lockmode != 'r' || lockmode != 'w') {
-    //TODO throw an input error in some way. mode is not 'r' or 'w'
-  }
-
   // logging variables 
   const char* Operation;
   const char* LockType;
   const char* Status = "Granted"; // guarenteed 'granted' from process_read_write_operation()
 
-  if(lockmode == 'r') {
+  if(lockmode == READ_MODE) {
     ZGT_Sh->objarray[obno]->value -= 4; // if read, decrement by 4. [LMoon] @Jacobmpp, it's stated in the project description. Yes decrementing when we read is dumb.
 
     Operation = "ReadTx";
-    LockType = "ReadLock";
-  } else if(lockmode == 'w') {
+  } else {
     ZGT_Sh->objarray[obno]->value += 7; // if write, increment by 7.
 
     Operation = "WriteTx";
-    LockType = "WriteLock";
   }
+  
+  LockType = get_tx(tid)->Txtype == READ_MODE ? "ReadLock" : "WriteLock";
 
   // Write to log
-  fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t%d:%d:%d\t%s\t%s\t%c\n",
-           tid, ' ', Operation, obno, ZGT_Sh->objarray[obno]->value, ZGT_Sh->optime[tid], LockType, Status, this->status);
+  fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t\t%d:%d:%-4.d\t\t%s\t%s\t%c\n",
+           tid, NOT_BEGIN_TX, Operation, obno, ZGT_Sh->objarray[obno]->value, ZGT_Sh->optime[tid], LockType, Status, this->status);
   fflush(ZGT_Sh->logfile);
 
   // sleep for optime in miliseconds
-  usleep(ZGT_Sh->optime[tid] * 1000);
+  usleep(ZGT_Sh->optime[tid]);
 }
 
 void *aborttx(void *arg)
@@ -209,7 +208,7 @@ void *aborttx(void *arg)
   struct param *node = (struct param *)arg; // get tid and count
   start_operation(node->tid, node->count); // wait for previous thread of same transaction to end.
 
-  do_commit_abort_operation(node->tid, 'a'); // [LMoon] not sure if 'a' is correct. find how node->count works
+  do_commit_abort_operation(node->tid, ABORT);
 
   finish_operation(node->tid);
   pthread_exit(NULL); // thread exit
@@ -220,15 +219,15 @@ void *committx(void *arg)
   struct param *node = (struct param *)arg; // get tid and count
   start_operation(node->tid, node->count);
 
-  do_commit_abort_operation(node->tid, 'c'); // [LMoon] not sure if 'c' is correct. find how node->count works
+  do_commit_abort_operation(node->tid, COMMIT);
 
   finish_operation(node->tid);
   pthread_exit(NULL); // thread exit
 }
 void *do_commit_abort_operation(long tid, char status)
 {
-  if(status != 'c' || status != 'a') {
-    //TODO throw an input error in some way. status is not 'c' or 'a'
+  if(status != COMMIT || status != ABORT) {
+    //TODO throw an input error in some way. status is not COMMIT or ABORT
   }
 
   // lock and get relevent data
@@ -242,17 +241,17 @@ void *do_commit_abort_operation(long tid, char status)
 
   // housekeeping
   const char* Operation;
-  if(status == 'c') {
+  if(status == COMMIT) {
     Operation = "CommitTx";
-    tx->status = 'E';
-  } else if(status == 'a') {
+    tx->status = TR_END;
+  } else if(status == ABORT) {
     Operation = "AbortTx";
-    tx->status = 'A';
+    tx->status = TR_ABORT;
   }
 
   // logging
   fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t",
-           tid, ' ', Operation);
+           tid, NOT_BEGIN_TX, Operation);
   
   // release resources
   get_tx(tid)->free_locks();
@@ -265,46 +264,46 @@ void *do_commit_abort_operation(long tid, char status)
 
 int zgt_tx::set_lock(long tid, long sgno, long obno, int count, char lockmode)
 {
-  bool has_set = false;
+  bool gainedLock = false;
 
   zgt_p(0);
   zgt_hlink *ob = ZGT_Ht->find(this->sgno, obno);
 
   // trying to gain a lock
-  if(lockmode == 'S') {
+  if(lockmode == SHARED_LOCK) {
     if(ob == NULL) { // if doesn't exist in ht
-      ZGT_Ht->add(this, this->sgno, obno, 'S');
-      has_set = true;
+      ZGT_Ht->add(this, this->sgno, obno, SHARED_LOCK);
+      gainedLock = true;
 
     } else { // if exists
-      if(ob->lockmode == 'S') { // if shared
-        ZGT_Ht->add(this, this->sgno, obno, 'S'); // make entry for current transaction
-        has_set = true;
+      if(ob->lockmode == SHARED_LOCK) { // if shared
+        ZGT_Ht->add(this, this->sgno, obno, SHARED_LOCK); // make entry for current transaction
+        gainedLock = true;
 
       } else {  // if exclusive
         // unable to lock due to an exclusive lock already existing
-        has_set = false;
+        gainedLock = false;
       }
     }
-  } else if(lockmode == 'X') {
+  } else if(lockmode == EXCLUSIVE_LOCK) {
     if(ob == NULL) { // if doesn't exist in ht
-      ZGT_Ht->add(this, this->sgno, obno, 'X');
-      has_set = true;
+      ZGT_Ht->add(this, this->sgno, obno, EXCLUSIVE_LOCK);
+      gainedLock = true;
 
     } else { // if exists
       // unable to lock due to requiring an exclusive lock when a lock already exists
-      has_set = false;
+      gainedLock = false;
     }
   }
 
   // if set, continue. if not, wait
-  if(has_set) {
-    this->status = 'P';
+  if(gainedLock || ob->tid == tid) {
+    this->status = TR_ACTIVE;
     zgt_v(0);
     return 0;
 
   } else {
-    this->status = 'W';
+    this->status = TR_WAIT;
     
     zgt_tx *other = get_tx(ob->tid);
     other->semno = ob->tid;
