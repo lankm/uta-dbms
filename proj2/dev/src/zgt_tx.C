@@ -183,16 +183,17 @@ void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
   const char* Status = "Granted"; // guarenteed 'granted' from process_read_write_operation()
 
   if(lockmode == READ_MODE) {
-    ZGT_Sh->objarray[obno]->value -= 4; // if read, decrement by 4. [LMoon] @Jacobmpp, it's stated in the project description. Yes decrementing when we read is dumb.
+    ZGT_Sh->objarray[obno]->value -= 4; // if read, decrement by 4.
+    // Note: This is stated in the project description. Decrementing when we read is unconventional.
 
     Operation = "ReadTx";
+    LockType = "ReadLock";
   } else {
     ZGT_Sh->objarray[obno]->value += 7; // if write, increment by 7.
 
     Operation = "WriteTx";
+    LockType = "WriteLock";
   }
-  
-  LockType = get_tx(tid)->Txtype == READ_MODE ? "ReadLock" : "WriteLock";
 
   // Write to log
   fprintf(ZGT_Sh->logfile, "T%d\t%c\t%s\t\t%d:%d:%-4.d\t\t%s\t%s\t%c\n",
@@ -282,7 +283,9 @@ int zgt_tx::set_lock(long tid, long sgno, long obno, int count, char lockmode)
 
       } else {  // if exclusive
         // unable to lock due to an exclusive lock already existing
-        gainedLock = false;
+        // unless it has the exclusive lock (this would only be applicable in
+        // a system where a transaction could have differnt types of locks)
+        gainedLock = ob->tid == tid;
       }
     }
   } else if(lockmode == EXCLUSIVE_LOCK) {
@@ -292,12 +295,13 @@ int zgt_tx::set_lock(long tid, long sgno, long obno, int count, char lockmode)
 
     } else { // if exists
       // unable to lock due to requiring an exclusive lock when a lock already exists
-      gainedLock = false;
+      // unless it has the exclusive lock
+      gainedLock = ob->tid == tid;
     }
   }
 
   // if set, continue. if not, wait
-  if(gainedLock || ob->tid == tid) {
+  if(gainedLock) {
     this->status = TR_ACTIVE;
     zgt_v(0);
     return 0;

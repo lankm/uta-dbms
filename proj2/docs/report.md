@@ -14,9 +14,9 @@ Convert to pdf when finalized.
 
 ### Difficulties Encountered
 
-1: Confusing skeleton code
+1: Issues in skeleton code
 
-The provided skeleton code had multiple spacing, output, log output, log name, ... provided in it. I will list the changes made here, none make any impact other than making outputs more readable:
+The provided skeleton code had multiple spacing, output, log output, log name, ... provided in it. I will list the changes made here, none make any impact other than making stdout outputs more readable for us:
 
 - avoided printing duplicating information when read from a file.
 - fixed openlog() so logfilename is printed correctly.
@@ -24,15 +24,16 @@ The provided skeleton code had multiple spacing, output, log output, log name, .
 - changed the order of functions in zgt_tx to make the code more readable and to outline our work
 - made commit print out correct transaction id. Only effected print, not execution
 
-These changes were all in zgt_test.c, so they are not part of the submitted code, but they were very important to enhancing readability of the printed information.
+These changes were all in zgt_test.c, so they are not part of the submitted code, but they were helpful to enhancing readability of the printed information.
 
 As a last bit of complaint about the skeleton code. It is not C++, it is a C/C++ amalgamation.
-This is not uncommon in projects that started as C and became C++, but it makes reading the code noticably more difficult.
+This is not uncommon in projects that started as C and became C++, but it makes reading the code significantly more difficult.
 
 2: Interacting with the skeleton was far harder than the logic of the implementation
 
 The logic of each transaction function is relatively simple given the information available in the PowerPoints and lectures.
-The vast majority of the challenge of this project was figuring out how to use semaphors for locking, where to find stored information (specificly by way of code, not necessarily the data structure), etc. as opposed to when those things need to be done.
+The vast majority of the challenge of this project was figuring out how to use semaphors for locking, where to find stored information (specificly by way of code, not necessarily the data structures), etc. as opposed to when those things need to be done.
+
 If the intent of the project was for that to be the real challenge, we understand, however it was increadibly frustrating.
 
 ## File Descriptions
@@ -42,8 +43,6 @@ No new files were created.
 No new functions were created.
 
 ## Division of Labor
-
-TODO
 
 - Landon Moon
   - 2/29/2024 - 1 hour - Learning the requirements
@@ -59,7 +58,9 @@ TODO
   - 3/07/2024 - 3 hours - Learning the skeleton
   - 3/14/2024 - 2 hours - Learning the new code and planning next steps (didn't know the next time I looked, the code would be done)
   - 3/15/2024 - 3 hour - Debugging and Testing on Omega
-  - 3/15/2024 - 2 hours - Writing Report
+  - 3/15/2024 - 2 hours - Report Writing
+  - 3/15/2024 - 1 hour - Debugging and Testing on Omega
+  - 3/16/2024 - 1 hours - Finishing Report
 
 ## Logical errors and how you handled them
 
