@@ -1,0 +1,11 @@
+// testing
+LogFile ../test-files/test.log
+BeginTx 2 R
+BeginTx 1 R
+Read    1 1
+read    2 1
+commit  2
+Abort   1
+read    1 2
+commit  1
+end all
