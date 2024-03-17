@@ -258,7 +258,12 @@ void *do_commit_abort_operation(long tid, char status)
   get_tx(tid)->free_locks();
   fflush(ZGT_Sh->logfile); // finish logging. free_locks() outputs
   if(tx->semno != -1) {
-    zgt_v(tx->semno);
+    // wake up each of the waiting threads
+    int i;
+    int num_waiting = zgt_nwait(tx->semno);
+    for(i=0; i<num_waiting; i++) {
+      zgt_v(tx->semno);
+    }
   }
   zgt_v(0);
 }

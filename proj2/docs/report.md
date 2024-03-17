@@ -53,6 +53,7 @@ No new functions were created.
   - 3/14/2024 - 2 hours - Completed perform\_...\_operation()
   - 3/15/2024 - 2 hours - First implementation of gaining read locks
   - 3/15/2024 - 1 hour - refactor. possibly done
+  - 3/16/2024 - 3 hours - memory leak investication
 - Jacob Holz
   - 2/29/2024 - 1 hour - Learning the requirements
   - 3/07/2024 - 3 hours - Learning the skeleton
@@ -76,4 +77,8 @@ Most logical errors were avoided before they cropped up through the use of pair 
   This is the state that the program was in at the time of submission.
   The commit that reverted the solution to the logical error in favor of avoiding illogical deadlocks is here:
 
-- Note: These logical errors are quite limited because we planned very deeply and coded very carefully before actually running the program.
+- Logical Error 3: Library memory leak instability
+
+  The provided code and library from the skeleton code NEVER frees any dynamically allocated memory. This causes the operating system to mistake memory values if executions of the program are done back-to-back. Time must be given for the operating system to clean up the programs unfreed memory. This was tested extensivly and was determined through multiple means:
+  - tid values passed to a given thread could be non-existent in the txt file. Causing an operation of an invalid tid to try to gain an invalid mutex lock. This was confirmed multiple times and causes the thread with the invalid tid to hang the entire program. The int returned from string2int is incorrect.
+  - malloc calls fail more often directly after a previous execution. The skeleton code never tests for a successful malloc call, instead it segfaults due to trying to access a null pointer. The dynamic memory allocation is located in the library and is not our responsibility to rewrite the entire framework from scratch. This occurs primarily during param creation and ht entry creation.
