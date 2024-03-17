@@ -8,7 +8,7 @@ Convert to pdf when finalized.
 
 ## Overall Status: Complete, nothing left unimplemented
 
-### Implemented Correctly
+### Implemented Correctly: Everything Assigned
 
 A thread is created for each operation of each transaction.
 These threads are run in the correct order by having a decrementing mutex value match their respective negative indices.
@@ -54,8 +54,9 @@ No new functions were created.
   - 3/13/2024 - 2 hours - Found where object values are located. read code
   - 3/14/2024 - 2 hours - Completed perform\_...\_operation()
   - 3/15/2024 - 2 hours - First implementation of gaining read locks
-  - 3/15/2024 - 1 hour  - refactor. possibly done
-  - 3/16/2024 - 3 hour  - Debugging and Testing on Omega
+  - 3/15/2024 - 1 hour - refactor. possibly done
+  - 3/16/2024 - 3 hours - memory leak investication
+  
 - Jacob Holz
   - 2/29/2024 - 1 hour  - Learning the requirements
   - 3/07/2024 - 3 hours - Learning the skeleton
@@ -77,6 +78,16 @@ Many logical errors were avoided before they cropped up through the use of caref
 
   We just had to have it check whether the tid of the lock entry was the same as the requesting transaction instead of just returning false when there is already an exclusive lock. We also noticed that the same would normally go for a shared lock, but since a transaction can only ever do one kind of lock in this project, that is not necessarily.
 
+- Logical Error 3: Library memory leak instability
 
-- Logical Error 3: The program would hang randomly without deadlocking
+  The provided code and library from the skeleton code NEVER frees any dynamically allocated memory. This causes the operating system to mistake memory values if executions of the program are done back-to-back. Time must be given for the operating system to clean up the programs unfreed memory. This was tested extensivly and was determined through multiple means:
+  - tid values passed to a given thread could be non-existent in the txt file. Causing an operation of an invalid tid to try to gain an invalid mutex lock. This was confirmed multiple times and causes the thread with the invalid tid to hang the entire program. The int returned from string2int is incorrect.
+  - malloc calls fail more often directly after a previous execution. The skeleton code rarely tests for a successful malloc call, instead it segfaults due to trying to access a null pointer. The dynamic memory allocation is located in the library and is not our responsibility to rewrite the entire framework from scratch. This occurs primarily during param creation. Again this was tested by printing out the ptr value from malloc and it is occasionally null which will always cause a segfault if not checked for. Additional checks were put in place to mitigate this.
 
+- Logical error 4: remove_tx() never removed a transaction
+
+  a bug was found in remove_tx() which caused it to never remove a transaction. This was due to both pointers always pointing to the same transaction. When the transaction found nextr it is set to nextr which does nothing. additionally the special case for the first transaction was not originally considered by the skeleton code. It would have required double pointers with the original method.
+
+- Logical error 5: general logical errors with the skeleton code
+
+  There are still a bunch of other smaller logical errors that aren't worthy of an entire section. This section is a general complaint with the state of the skeleton code at the beginning of the project. Many C++ coding standards could have prevented the vast majority of bugs in the provided library. Due to not rewriting every line provided in the skeleton code, there are bound to be errors beyond our control.

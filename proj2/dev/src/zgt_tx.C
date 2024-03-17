@@ -76,18 +76,20 @@ int zgt_tx::remove_tx()
 {
   // remove the transaction from the TM
 
-  zgt_tx *txptr, *lastr1;
-  lastr1 = ZGT_Sh->lastr;
+  // if transaction is first in list
+  if (ZGT_Sh->lastr != NULL && ZGT_Sh->lastr->tid == this->tid) {
+    ZGT_Sh->lastr = ZGT_Sh->lastr->nextr;
+    return (0);
+  }
+
+  zgt_tx *txptr;
   for (txptr = ZGT_Sh->lastr; txptr != NULL; txptr = txptr->nextr)
-  { // scan through list
-    if (txptr->tid == this->tid)
-    {                               // if correct node is found
-      lastr1->nextr = txptr->nextr; // update nextr value; done
-                                    // delete this;
+  { // if next transaction exists and is the current tid
+    if (txptr->nextr != NULL && txptr->nextr->tid == this->tid)
+    {                               
+      txptr->nextr = txptr->nextr->nextr; // update by skipping transaction
       return (0);
     }
-    else
-      lastr1 = txptr->nextr; // else update prev value
   }
   fprintf(ZGT_Sh->logfile, "Trying to Remove a Tx:%d that does not exist\n", this->tid);
   fflush(ZGT_Sh->logfile);
@@ -109,7 +111,13 @@ void *begintx(void *arg)
   // the tx object, set the tx to TR_ACTIVE and obno to -1; there is no
   // semno as yet as none is waiting on this tx.
 
+  
+
   struct param *node = (struct param *)arg; // get tid and count
+  if(node->tid > MAX_TRANSACTIONS) {
+    printf("Memory error. Tx %d is an invalid input\n", node->tid);
+    pthread_exit(NULL); // thread exit
+  }
 
   start_operation(node->tid, node->count);
 
@@ -157,9 +165,14 @@ void *writetx(void *arg)
 void *process_read_write_operation(long tid, long obno, int count, char mode)
 {
   // get reference to current transaction
+  zgt_p(0);
   zgt_tx *tx = get_tx(tid);
+  zgt_v(0);
   if(tx == NULL) {
-    printf("Tx with tid: %d does not exist", tid);
+    printf(":::Tx with tid: %d does not exist.\n", tid);
+    fflush(stdout);
+    fprintf(ZGT_Sh->logfile, "Tx with tid: %d does not exist. skipping operation\n", tid);
+    fflush(ZGT_Sh->logfile);
     return NULL;
   }
 
@@ -227,16 +240,14 @@ void *committx(void *arg)
 }
 void *do_commit_abort_operation(long tid, char status)
 {
-  if(status != COMMIT || status != ABORT) {
-    //TODO throw an input error in some way. status is not COMMIT or ABORT
-  }
-
   // lock and get relevent data
   zgt_p(0);
   zgt_tx *tx = get_tx(tid);
   if(tx == NULL) {
-    zgt_v(0);
-    printf("Tx with tid: %d does not exist", tid);
+    printf(":::Tx with tid: %d does not exist.\n", tid);
+    fflush(stdout);
+    fprintf(ZGT_Sh->logfile, "Tx with tid: %d does not exist. skipping operation\n", tid);
+    fflush(ZGT_Sh->logfile);
     return NULL;
   }
 
@@ -258,8 +269,14 @@ void *do_commit_abort_operation(long tid, char status)
   get_tx(tid)->free_locks();
   fflush(ZGT_Sh->logfile); // finish logging. free_locks() outputs
   if(tx->semno != -1) {
-    zgt_v(tx->semno);
+    // wake up each of the waiting threads
+    int i;
+    int num_waiting = zgt_nwait(tx->semno);
+    for(i=0; i<num_waiting; i++) {
+      zgt_v(tx->semno);
+    }
   }
+  tx->remove_tx();
   zgt_v(0);
 }
 
@@ -273,12 +290,13 @@ int zgt_tx::set_lock(long tid, long sgno, long obno, int count, char lockmode)
   // trying to gain a lock
   if(lockmode == SHARED_LOCK) {
     if(ob == NULL) { // if doesn't exist in ht
-      ZGT_Ht->add(this, this->sgno, obno, SHARED_LOCK);
+      while(ZGT_Ht->add(this, this->sgno, obno, SHARED_LOCK) == -1) {}
+
       gainedLock = true;
 
     } else { // if exists
       if(ob->lockmode == SHARED_LOCK) { // if shared
-        ZGT_Ht->add(this, this->sgno, obno, SHARED_LOCK); // make entry for current transaction
+        while(ZGT_Ht->add(this, this->sgno, obno, SHARED_LOCK) == -1) {} // make entry for current transaction
         gainedLock = true;
 
       } else {  // if exclusive
@@ -290,7 +308,7 @@ int zgt_tx::set_lock(long tid, long sgno, long obno, int count, char lockmode)
     }
   } else if(lockmode == EXCLUSIVE_LOCK) {
     if(ob == NULL) { // if doesn't exist in ht
-      ZGT_Ht->add(this, this->sgno, obno, EXCLUSIVE_LOCK);
+      while(ZGT_Ht->add(this, this->sgno, obno, EXCLUSIVE_LOCK) == -1) {}
       gainedLock = true;
 
     } else { // if exists

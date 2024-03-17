@@ -69,7 +69,8 @@ int zgt_tm::BeginTx(long tid, int thrNum, char type)
   printf("creating BeginTx thread for Tx: %d\n", tid);
   fflush(stdout);
 #endif
-  struct param *nodeinfo = (struct param *)malloc(sizeof(struct param));
+  struct param *nodeinfo;
+  while((nodeinfo = (struct param *)malloc(sizeof(struct param))) == NULL) {}
   pthread_t thread1;
   nodeinfo->tid = tid;
   nodeinfo->Txtype = type;
@@ -101,11 +102,12 @@ int zgt_tm::TxRead(long tid, long obno, int thrNum)
 #ifdef TM_DEBUG
   printf("creating TxRead thread for Tx: %d\n", tid);
   fflush(stdout);
-  fflush(stdout);
 #endif
   pthread_t thread1;
 
-  struct param *nodeinfo = (struct param *)malloc(sizeof(struct param));
+  struct param *nodeinfo;
+  while((nodeinfo = (struct param *)malloc(sizeof(struct param))) == NULL) {}
+
   nodeinfo->tid = tid;
   nodeinfo->obno = obno;
   nodeinfo->Txtype = ' ';
@@ -129,11 +131,12 @@ int zgt_tm::TxWrite(long tid, long obno, int thrNum)
 #ifdef TM_DEBUG
   printf("creating TxWrite thread for Tx: %d\n", tid);
   fflush(stdout);
-  fflush(stdout);
 #endif
   pthread_t thread1;
 
-  struct param *nodeinfo = (struct param *)malloc(sizeof(struct param));
+  struct param *nodeinfo;
+  while((nodeinfo = (struct param *)malloc(sizeof(struct param))) == NULL) {}
+
   nodeinfo->tid = tid;
   nodeinfo->obno = obno;
   nodeinfo->Txtype = ' ';
@@ -157,11 +160,12 @@ int zgt_tm::CommitTx(long tid, int thrNum)
 #ifdef TM_DEBUG
   printf("creating CommitTx thread for Tx: %d\n", tid);
   fflush(stdout);
-  fflush(stdout);
 #endif
   pthread_t thread1;
 
-  struct param *nodeinfo = (struct param *)malloc(sizeof(struct param));
+  struct param *nodeinfo;
+  while((nodeinfo = (struct param *)malloc(sizeof(struct param))) == NULL) {}
+
   nodeinfo->tid = tid;
   nodeinfo->obno = -1;
   nodeinfo->Txtype = ' ';
@@ -185,11 +189,12 @@ int zgt_tm::AbortTx(long tid, int thrNum)
 #ifdef TM_DEBUG
   printf("creating AbortTx thread for Tx: %d\n", tid);
   fflush(stdout);
-  fflush(stdout);
 #endif
   pthread_t thread1;
 
-  struct param *nodeinfo = (struct param *)malloc(sizeof(struct param));
+  struct param *nodeinfo;
+  while((nodeinfo = (struct param *)malloc(sizeof(struct param))) == NULL) {}
+
   nodeinfo->tid = tid;
   nodeinfo->obno = -1;
   nodeinfo->Txtype = ' ';
