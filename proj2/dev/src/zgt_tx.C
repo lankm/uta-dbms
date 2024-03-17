@@ -55,7 +55,7 @@ zgt_tx::zgt_tx(long tid, char Txstatus, char type, pthread_t thrid)
 /* Method used to obtain reference to a transaction node      */
 /* Inputs the transaction id. Makes a linear scan over the    */
 /* linked list of transaction nodes and returns the reference */
-/* of the required node if found. Otherwise returns NULL      */
+/* of the required node if  found. Otherwise returns NULL      */
 
 zgt_tx *get_tx(long tid1)
 {
@@ -200,7 +200,7 @@ void zgt_tx::perform_read_write_operation(long tid, long obno, char lockmode)
            tid, NOT_BEGIN_TX, Operation, obno, ZGT_Sh->objarray[obno]->value, ZGT_Sh->optime[tid], LockType, Status, this->status);
   fflush(ZGT_Sh->logfile);
 
-  // sleep for optime in miliseconds
+  // sleep for optime in nanoseconds
   usleep(ZGT_Sh->optime[tid]);
 }
 
