@@ -96,7 +96,6 @@ Many logical errors were avoided before they cropped up through the use of caref
 
   - tid values passed to a given thread could be non-existent in the txt file. Causing an operation of an invalid tid to try to gain an invalid mutex lock. This was confirmed multiple times and causes the thread with the invalid tid to hang the entire program. The int returned from string2int is incorrect.
   - malloc calls fail more often directly after a previous execution. The skeleton code rarely tests for a successful malloc call, instead it segfaults due to trying to access a null pointer. The dynamic memory allocation is located in the library and is not our responsibility to rewrite the entire framework from scratch. This occurs primarily during param creation. Again this was tested by printing out the ptr value from malloc and it is occasionally null which will always cause a segfault if not checked for. Additional checks were put in place to mitigate this.
-    At runtime, stopping the program with CTRL + Z and starting it again with fg often breaks a non-deadlock hang.
 
 - Logical error 4: remove_tx() never removed a transaction
 
