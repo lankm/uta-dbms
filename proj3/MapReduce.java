@@ -24,7 +24,9 @@ public class MapReduce {
   private static final int GENRE_LIST = 5;
 
   private static final String MOVIE = "movie";
+  private static final String TV_MOVIE = "tvMovie";
   private static final String RATING_CUTOFF = "7.5";
+  private static final String PERFECT_RATING = "10";
   private static final int FIRST_YEAR = 1991;
   private static final int LAST_YEAR = 2020;
   private static final int YEARS_IN_A_RANGE = 10;
@@ -49,17 +51,18 @@ public class MapReduce {
       StringTokenizer itr = new StringTokenizer(value.toString(), "\n");
       while (itr.hasMoreTokens()) {
         String[] line = itr.nextToken().split(";");
-        if (line.length <= GENRE_LIST || !line[TYPE].equals(MOVIE) || line[RATING].compareTo(RATING_CUTOFF) < 0) {
+        if (line.length <= GENRE_LIST || (!line[TYPE].equals(MOVIE) && !line[TYPE].equals(TV_MOVIE)) || (line[RATING].compareTo(RATING_CUTOFF) < 0 && !line[RATING].equals(PERFECT_RATING))) {
           break;
         }
         int year = 0;
         try {
           year = Integer.parseInt(line[YEAR]);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
         if (year < FIRST_YEAR || year > LAST_YEAR) {
           break;
         }
-        int rangeStart = year - (year-1) % YEARS_IN_A_RANGE;
+        int rangeStart = year - (year - 1) % YEARS_IN_A_RANGE;
         int rangeEnd = rangeStart + 9;
         String yearRange = "[" + rangeStart + "-" + rangeEnd + "]";
 
