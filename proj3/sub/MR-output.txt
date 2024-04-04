@@ -1,0 +1,9 @@
+[1991-2000],Action;Thriller     24
+[1991-2000],Adventure;Drama     34
+[1991-2000],Comedy;Romance      93
+[2001-2010],Action;Thriller     35
+[2001-2010],Adventure;Drama     82
+[2001-2010],Comedy;Romance      194
+[2011-2020],Action;Thriller     107
+[2011-2020],Adventure;Drama     191
+[2011-2020],Comedy;Romance      310
