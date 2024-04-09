@@ -1,7 +1,6 @@
 # uta-dbms
-A simple implementation of a Database Management System
+Contains group projects for our database implementation class
 
 ### Members
 - Landon Moon
 - Jacob Holz
-- Juan Gamez
